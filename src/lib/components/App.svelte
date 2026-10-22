@@ -243,6 +243,51 @@
 		playing = !playing;
 	}
 
+	/*
+	 * A long chain ("345 + 87 − 120 + 456 − 33") is wider than the problem's
+	 * line. Rather than cut it off, its type steps down just enough to fit,
+	 * and goes back to full size for short problems. The line's height is
+	 * fixed, so a smaller size never moves anything below it.
+	 */
+	const PROBLEM_SIZE = 1.55;
+	const SMALLEST = 0.6;
+	let problemField: HTMLInputElement | undefined = $state();
+	let problemScale = $state(1);
+	let measure: CanvasRenderingContext2D | null = null;
+
+	/** Size the problem's type to its line, measuring the line as it is now. */
+	function fitProblem(text: string) {
+		const field = problemField;
+		const width = field?.clientWidth ?? 0;
+		if (!field || !width) return;
+		measure ??= document.createElement('canvas').getContext('2d');
+		if (!measure) return;
+		const style = getComputedStyle(field);
+		const px = PROBLEM_SIZE * parseFloat(getComputedStyle(document.documentElement).fontSize);
+		measure.font = `${style.fontWeight} ${px}px ${style.fontFamily}`;
+		const sample = text || DEFAULT_PROBLEM;
+		// Canvas leaves out letter-spacing (0.04em), so it is added back here.
+		const needed = measure.measureText(sample).width + sample.length * 0.04 * px;
+		problemScale = Math.max(SMALLEST, Math.min(1, (width - 4) / needed));
+	}
+
+	// Refit whenever the problem changes…
+	$effect(() => {
+		fitProblem(input);
+	});
+
+	// …and whenever its line changes width, or the web fonts arrive (until
+	// then every width is a fallback font's).
+	$effect(() => {
+		const field = problemField;
+		if (!field) return;
+		const refit = () => fitProblem(untrack(() => input));
+		const observer = new ResizeObserver(refit);
+		observer.observe(field);
+		void document.fonts.ready.then(refit);
+		return () => observer.disconnect();
+	});
+
 	function remember(key: string, value: string) {
 		try {
 			localStorage.setItem(key, value);
@@ -344,7 +389,10 @@
 				<div class="entry">
 					<input
 						type="text"
+						class="problem"
+						bind:this={problemField}
 						bind:value={input}
+						style:font-size="{PROBLEM_SIZE * problemScale}rem"
 						spellcheck="false"
 						autocomplete="off"
 						aria-label={ui.problemLabel}
@@ -803,6 +851,9 @@
 		font: 500 1.55rem/1.3 var(--mincho);
 		letter-spacing: 0.04em;
 		transition: border-color 0.3s ease;
+	}
+	input.problem {
+		height: 2.8rem;
 	}
 	input[type='text']::placeholder {
 		color: var(--ink-ghost);
