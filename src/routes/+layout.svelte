@@ -1,12 +1,13 @@
 <script lang="ts">
-	import favicon from '#lib/assets/favicon.svg';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<!-- 珠, the bead of 珠算, as the seal beside the 算盤 mark. -->
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 </svelte:head>
 
 {@render children()}
