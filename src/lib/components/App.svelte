@@ -147,6 +147,14 @@
 		step ? (shown ? step.after : step.before) : (solution?.initial ?? [])
 	);
 	const activeRods = $derived(step?.rods ?? []);
+	/**
+	 * The board's labels, as they stand on the board shown: a hidden step
+	 * keeps the labels from before its move, which would otherwise give it away.
+	 */
+	const regions = $derived.by(() => {
+		const from = shown ? step : (steps[index - 1] ?? null);
+		return from?.regions ?? solution?.regions ?? [];
+	});
 
 	function readAnswer(rods: Board): string {
 		if (!solution) return '';
@@ -572,7 +580,7 @@
 					{board}
 					rodCount={solution.rodCount}
 					{activeRods}
-					regions={solution.regions}
+					{regions}
 					unitRod={solution.unitRod}
 					{speed}
 					muted={!soundOn || !shown}
@@ -585,6 +593,7 @@
 						kind={mode === 'read' ? 'read' : 'flash'}
 						problem={drillProblem}
 						answer={finalAnswer}
+						continues={solution.continues ?? false}
 						pace={speed}
 						voiceLang={ui.voiceLang}
 						text={drillText}
@@ -817,7 +826,8 @@
 				-->
 				<p class="answer" class:held={answer === null}>
 					<span class="answer-label">{ui.answer}</span>
-					<strong>{answer ?? finalAnswer}</strong>
+					<!-- A division cut off at its decimal places goes on: 0.1111… -->
+				<strong>{answer ?? finalAnswer}{solution.continues ? '…' : ''}</strong>
 					{#if recall}
 						<span class="verdict" class:wrong={verdict && !verdict.correct} class:held={!verdict}
 							>{verdict

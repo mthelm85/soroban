@@ -69,20 +69,26 @@
 		};
 	});
 
-	// Structure: rebuild only when the board size or the labelled regions change.
+	// Structure: rebuild only when the board size or its unit point changes.
 	// Reading the board here unguarded would rerun this on every step and snap
 	// the beads into place instead of letting them move.
 	$effect(() => {
 		const count = rodCount;
-		const spans = regions;
 		const unit = unitRod;
 		untrack(() => {
 			if (!scene) return;
 			scene.setRodCount(count);
-			scene.setRegions(spans, unit);
+			scene.setRegions(regions, unit);
 			scene.setBoard(board, activeRods);
 			scene.snap();
 		});
+	});
+
+	// Labels can change from step to step (a division's quotient grows into the
+	// dividend's rods); they move without disturbing the beads.
+	$effect(() => {
+		const spans = regions;
+		untrack(() => scene?.setRegions(spans, unitRod));
 	});
 
 	// Beads: animate on every step.

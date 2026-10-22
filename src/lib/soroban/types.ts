@@ -81,6 +81,12 @@ export interface Step {
 	rods: number[];
 	before: Board;
 	after: Board;
+	/**
+	 * Labels for the board after this step, when they change as the work goes
+	 * on (division: the quotient grows into rods the dividend leaves). Absent,
+	 * the solution's own regions hold throughout.
+	 */
+	regions?: Region[];
 }
 
 /** A labelled span of rods, drawn as a bracket under the board. */
@@ -114,6 +120,8 @@ export interface Solution {
 	regions: Region[];
 	/** Method notes shown beside the board (place value rule, method name, …). */
 	notes: Note[];
+	/** True when the answer was cut off and goes on (a division that does not come out). */
+	continues?: boolean;
 }
 
 export class SorobanError extends Error {}

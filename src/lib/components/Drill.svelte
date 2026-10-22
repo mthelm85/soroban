@@ -51,6 +51,8 @@
 		kind: 'flash' | 'read';
 		problem: DrillProblem;
 		answer: string;
+		/** The answer goes on past what is shown (0.1111…). */
+		continues?: boolean;
 		/** The page's speed setting, 0.4–3; 1 is a comfortable pace. */
 		pace: number;
 		/** BCP 47 language for the voice, e.g. "ja-JP". */
@@ -68,6 +70,7 @@
 		kind,
 		problem,
 		answer,
+		continues = false,
 		pace,
 		voiceLang,
 		text,
@@ -274,7 +277,7 @@
 			{:else if verdict}
 				<p class="result" aria-live="polite">
 					<span class="answer-label">{text.answerLabel}</span>
-					<strong>{answer}</strong>
+					<strong>{answer}{continues ? '…' : ''}</strong>
 					<span class="verdict" class:wrong={!verdict.correct}
 						>{verdict.correct ? text.correct : text.yourAnswer(verdict.guess)}</span
 					>

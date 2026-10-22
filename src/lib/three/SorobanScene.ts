@@ -766,7 +766,9 @@ export class SorobanScene {
 
 	/** Set the labelled spans drawn under the board. */
 	setRegions(regions: Region[], unitRod: number) {
-		if (regions === this.regions && unitRod === this.unitRod) return;
+		// Compared by content: a division hands over fresh labels every step,
+		// and most of them are the same as the last.
+		if (unitRod === this.unitRod && JSON.stringify(regions) === JSON.stringify(this.regions)) return;
 		this.regions = regions;
 		this.unitRod = unitRod;
 		for (const child of [...this.boardGroup.children]) {

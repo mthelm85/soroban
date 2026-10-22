@@ -24,7 +24,7 @@
  *    dividend where it falls.
  */
 import { setNumber, subValueAt } from './arithmetic';
-import { formatSpan, readSpan, rodFromDigit, spanIsZero } from './board';
+import { formatSpan, readSpan, rodFromDigit, rodValue, spanIsZero } from './board';
 import { kuku } from './kuku';
 import { chooseRodCount } from './layout';
 import type { Messages } from './messages';
@@ -57,10 +57,12 @@ export function solveDivide(
 	const rodCount = chooseRodCount(Math.max(13, needed), m);
 	const unitRod = quotientOnes + (divisor.dec - dividend.dec);
 
-	// The subtractions are narrated in the *dividend's* place-value frame, which
-	// sits d+1 rods to the right of the quotient's, so that is the tape's frame.
-	// Quotient digits are named in the answer's frame explicitly.
-	const tape = new Tape(rodCount, dividendOnes, m);
+	// Every rod is named in the answer's place values, counted from the unit
+	// point on the beam — the one reference the learner can see. (Naming the
+	// subtractions in the dividend's own frame, d+1 rods to the right, gave the
+	// same rod two names: the quotient's tenths digit sat on one "tenths rod"
+	// while beads came off another.)
+	const tape = new Tape(rodCount, unitRod, m);
 	const quotientPlace = (rod: number) => m.place(unitRod - rod);
 	const s = m.divide;
 
@@ -137,23 +139,57 @@ export function solveDivide(
 		? null
 		: formatSpan(tape.board, lastQuotientRod + 1, rodCount - 1, dividendOnes);
 
+	/*
+	 * Labels that follow the work. The quotient grows into rods the dividend
+	 * has left, so one fixed pair of labels is wrong for most of the problem
+	 * (1 ÷ 9 starts with its 1 under "quotient"). At each step the quotient
+	 * covers its room and the digits found so far; the dividend covers what is
+	 * still being divided; and at the end, anything left is the remainder.
+	 */
+	const quotientLabel = (to: number): Region => ({
+		label: s.regionQuotient,
+		labelJa: '商',
+		from: answerSpan[0],
+		to,
+		unitRod,
+		tone: 'result'
+	});
+	/**
+	 * The dividend still being divided: from just past the quotient to its last
+	 * bead — and always over the rods a step is working, so the label does not
+	 * blink off when a borrow empties them for a moment. At the end, the
+	 * remainder covers only what is actually left.
+	 */
+	const workLabel = (
+		board: typeof tape.board,
+		from: number,
+		working: number[],
+		end: boolean
+	): Region | null => {
+		let to = rodCount - 1;
+		while (to >= from && rodValue(board[to]) === 0) to--;
+		for (const rod of working) if (rod >= from) to = Math.max(to, rod);
+		if (to < from) return null;
+		if (!end) return { label: s.regionDividend, labelJa: '実', from, to, tone: 'work' };
+		let first = from;
+		while (first < to && rodValue(board[first]) === 0) first++;
+		if (rodValue(board[first]) === 0) return null;
+		return { label: s.regionRemainder, labelJa: '余り', from: first, to, tone: 'work' };
+	};
+
+	// Before any digit is found, the quotient's room is everything left of the dividend.
 	const regions: Region[] = [
-		{
-			label: s.regionQuotient,
-			labelJa: '商',
-			from: answerSpan[0],
-			to: answerSpan[1],
-			unitRod,
-			tone: 'result'
-		},
-		{
-			label: s.regionDividend,
-			labelJa: '実',
-			from: Math.max(answerSpan[1] + 1, dividendStart),
-			to: rodCount - 1,
-			tone: 'work'
-		}
+		quotientLabel(dividendStart - 1),
+		{ label: s.regionDividend, labelJa: '実', from: dividendStart, to: dividendOnes, tone: 'work' }
 	];
+	let found = dividendStart - 1;
+	tape.steps.forEach((step, i) => {
+		if (step.role === 'quotient') found = Math.max(found, step.rods[0]);
+		const end = i === tape.steps.length - 1;
+		const quotientTo = end ? lastQuotientRod : found;
+		const work = workLabel(step.after, quotientTo + 1, step.role === 'quotient' ? [] : step.rods, end);
+		step.regions = work ? [quotientLabel(quotientTo), work] : [quotientLabel(quotientTo)];
+	});
 
 	const noteTexts = [
 		s.notes.method,
@@ -180,6 +216,7 @@ export function solveDivide(
 		initial: tape.initial,
 		steps: tape.steps,
 		regions,
-		notes
+		notes,
+		continues: !exact
 	};
 }

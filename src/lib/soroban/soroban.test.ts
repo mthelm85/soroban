@@ -310,3 +310,44 @@ describe('languages', () => {
 		expect(decimals).toContain('商の小数第1位');
 	});
 });
+
+describe('division reads clearly', () => {
+	it('names every rod from the unit point, so one rod never has two names', () => {
+		const s = solve('1 ÷ 9', { maxDecimals: 4 });
+		const tenthsRod = s.unitRod + 1;
+		const tenthsDigit = s.steps.find((st) => st.role === 'quotient' && st.text.includes('tenths'));
+		expect(tenthsDigit?.rods).toEqual([tenthsRod]);
+		// Beads named "tenths rod" are always on that same rod.
+		for (const st of s.steps) {
+			if (st.role !== 'quotient' && /\btenths rod/.test(st.text)) expect(st.rods).toEqual([tenthsRod]);
+		}
+		// The first subtraction takes its bead from the hundredths rod, where the 1 was set.
+		expect(s.steps[2].text).toContain('hundredths rod');
+	});
+
+	it('moves the labels with the work and marks what is left over', () => {
+		const s = solve('1 ÷ 9', { maxDecimals: 4 });
+		expect(s.continues).toBe(true);
+		const at = (i: number) => s.steps[i].regions?.map((r) => [r.label, r.from, r.to]);
+		// At the start the 1 is under "dividend", not under "quotient".
+		expect(at(0)).toEqual([
+			['quotient', 1, 2],
+			['dividend', 3, 3]
+		]);
+		// At the end the quotient holds its four digits and the leftover 1 is the remainder.
+		expect(at(s.steps.length - 1)).toEqual([
+			['quotient', 1, 5],
+			['remainder', 7, 7]
+		]);
+		// A borrow that briefly empties a rod does not drop the dividend's label.
+		for (const st of s.steps.slice(0, -1)) {
+			expect(st.regions?.some((r) => r.label === 'dividend')).toBe(true);
+		}
+	});
+
+	it('ends an exact division with the quotient alone', () => {
+		const s = solve('4104 ÷ 76');
+		expect(s.continues).toBe(false);
+		expect(s.steps[s.steps.length - 1].regions?.map((r) => r.label)).toEqual(['quotient']);
+	});
+});

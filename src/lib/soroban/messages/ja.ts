@@ -163,6 +163,7 @@ export const ja: Messages = {
 				: `${digit}はわる数の${i + 1}番目の数字なので、${q} × ${digit}は最初の積より${i}けた右にずらして引きます。わる数の数字が1つ進むごとに、1けたずつ右へずれます。`,
 		regionQuotient: '商',
 		regionDividend: '実',
+		regionRemainder: '余り',
 		notes: {
 			method: {
 				heading: '計算方法',

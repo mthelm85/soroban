@@ -106,6 +106,8 @@ export interface Messages {
 		subtractWhy(p: { q: number; digit: number; i: number }): string;
 		regionQuotient: string;
 		regionDividend: string;
+		/** What is left of the dividend when the division stops. */
+		regionRemainder: string;
 		notes: {
 			method: NoteText;
 			kakusho: NoteText;

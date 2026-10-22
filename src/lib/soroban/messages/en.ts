@@ -17,7 +17,11 @@ const PLACES: Record<number, string> = {
 	[-3]: 'thousandths',
 	[-4]: 'ten-thousandths',
 	[-5]: 'hundred-thousandths',
-	[-6]: 'millionths'
+	[-6]: 'millionths',
+	[-7]: 'ten-millionths',
+	[-8]: 'hundred-millionths',
+	[-9]: 'billionths',
+	[-10]: 'ten-billionths'
 };
 
 function earth(n: number): string {
@@ -184,6 +188,7 @@ export const en: Messages = {
 				: `${digit} is the divisor's ${ORDINALS[i] ?? `${i + 1}th`} digit, so ${q} × ${digit} is taken off ${rods(i)} further right than the first product. Each step along the divisor shifts the product one rod right.`,
 		regionQuotient: 'quotient',
 		regionDividend: 'dividend',
+		regionRemainder: 'remainder',
 		notes: {
 			method: {
 				heading: 'Method',
