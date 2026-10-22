@@ -4,7 +4,13 @@
 	import { page } from '$app/state';
 	import Soroban3D from '#lib/components/Soroban3D.svelte';
 	import StepList from '#lib/components/StepList.svelte';
-	import ExamplePicker from '#lib/components/ExamplePicker.svelte';
+	import InkMenu from '#lib/components/InkMenu.svelte';
+	import {
+		LEVELS,
+		dealProblem,
+		nextLevel,
+		type LevelId
+	} from '#lib/soroban/practice.js';
 	import { EXAMPLES, UI } from '#lib/i18n/ui.js';
 	import {
 		formatSpan,
@@ -23,6 +29,10 @@
 	const DEFAULT_DECIMALS = 4;
 	const PANEL_KEY = 'soroban:panel';
 	const SOUND_KEY = 'soroban:sound';
+	const PRACTICE_KEY = 'soroban:practice';
+	/** How many recent results per level are kept, and how many decide moving up. */
+	const KEPT = 10;
+	const STREAK = 5;
 
 	function attempt(
 		text: string,
@@ -68,6 +78,28 @@
 	let guess = $state('');
 	/** Set once the answer typed from memory has been checked. */
 	let verdict = $state<{ correct: boolean; guess: string } | null>(null);
+
+	/*
+	 * Practice: problems dealt at a level, graded by the moves they need (see
+	 * soroban/practice.ts). Answers given from memory are kept per level in
+	 * this browser, and five in a row suggests moving up.
+	 */
+	interface Result {
+		correct: boolean;
+		revealed: number;
+		total: number;
+	}
+	let practiceLevel = $state<LevelId | null>(null);
+	let results = $state<Partial<Record<LevelId, Result[]>>>({});
+
+	const recent = $derived(practiceLevel ? (results[practiceLevel] ?? []).slice(-STREAK) : []);
+	const following = $derived(practiceLevel ? nextLevel(practiceLevel) : null);
+	/** Five answers in a row from memory, each right with at most one step revealed. */
+	const readyToMoveUp = $derived(
+		following !== null &&
+			recent.length === STREAK &&
+			recent.every((r) => r.correct && r.revealed <= 1)
+	);
 
 	const steps = $derived(solution?.steps ?? []);
 	const step = $derived(index >= 0 ? (steps[index] ?? null) : null);
@@ -134,6 +166,33 @@
 	function check() {
 		if (!guess.trim()) return;
 		verdict = { correct: sameNumber(guess, finalAnswer), guess: guess.trim() };
+		if (practiceLevel) {
+			const kept = [
+				...(results[practiceLevel] ?? []),
+				{ correct: verdict.correct, revealed: revealed.size, total: steps.length }
+			].slice(-KEPT);
+			results = { ...results, [practiceLevel]: kept };
+			remember(PRACTICE_KEY, JSON.stringify(results));
+		}
+	}
+
+	/** Deal a fresh problem at the current level, never the one just worked. */
+	function deal() {
+		if (!practiceLevel) return;
+		const problem = dealProblem(practiceLevel, Math.random, solution?.problem);
+		input = problem;
+		run(problem);
+	}
+
+	function practise(level: LevelId) {
+		practiceLevel = level;
+		deal();
+	}
+
+	/** Problems typed in or picked from the examples end a practice run. */
+	function solveOwn(text = input) {
+		practiceLevel = null;
+		run(text);
 	}
 
 	/** Show the group's reasoning once, on the first step that belongs to it. */
@@ -198,6 +257,8 @@
 		try {
 			panelOpen = localStorage.getItem(PANEL_KEY) === 'open';
 			soundOn = localStorage.getItem(SOUND_KEY) !== 'off';
+			const saved = localStorage.getItem(PRACTICE_KEY);
+			if (saved) results = JSON.parse(saved);
 		} catch {
 			panelOpen = false;
 		}
@@ -269,7 +330,7 @@
 			<form
 				onsubmit={(event) => {
 					event.preventDefault();
-					run();
+					solveOwn();
 				}}
 			>
 				<div class="entry">
@@ -283,14 +344,27 @@
 					/>
 					<button type="submit" class="solve">{ui.solve}</button>
 				</div>
-				<ExamplePicker
+				<InkMenu
 					label={ui.examples}
-					examples={EXAMPLES}
-					hints={ui.exampleHints}
+					items={EXAMPLES.map((example, i) => ({
+						value: example,
+						title: example,
+						hint: ui.exampleHints[i]
+					}))}
 					onpick={(picked) => {
 						input = picked;
-						run(picked);
+						solveOwn(picked);
 					}}
+				/>
+				<InkMenu
+					label={ui.practice}
+					items={LEVELS.map((level) => ({
+						value: level.id,
+						title: ui.levels[level.id].name,
+						hint: ui.levels[level.id].hint
+					}))}
+					onpick={(level) => practise(level as LevelId)}
+					align="end"
 				/>
 			</form>
 
@@ -310,6 +384,32 @@
 
 		{#if error}
 			<p class="error" role="alert">{error}</p>
+		{/if}
+
+		{#if practiceLevel}
+			<div class="practice" aria-live="polite">
+				<span class="practice-label">{ui.practice}</span>
+				<span class="level-name">{ui.levels[practiceLevel].name}</span>
+				<span class="record">
+					{#if readyToMoveUp && following}
+						{ui.readyToMoveUp(ui.levels[following.id].name)}
+					{:else if recent.length}
+						{ui.practiceRecord(recent.filter((r) => r.correct).length, recent.length)}
+					{:else}
+						{ui.practiceStart}
+					{/if}
+				</span>
+				<span class="spacer"></span>
+				{#if readyToMoveUp && following}
+					<button type="button" class="reveal" onclick={() => following && practise(following.id)}
+						>{ui.moveUp}</button
+					>
+				{/if}
+				<button type="button" class="solve" onclick={deal}>{ui.nextProblem}</button>
+				<button type="button" class="quiet" onclick={() => (practiceLevel = null)}
+					>{ui.endPractice}</button
+				>
+			</div>
 		{/if}
 
 		{#if solution}
@@ -746,6 +846,32 @@
 		margin: 0.75rem 0 0;
 		font: 400 1rem/1.6 var(--mincho);
 		color: var(--shu);
+	}
+
+	/* ── practice ───────────────────────────────────────── */
+
+	.practice {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem 1.4rem;
+		margin-top: 1.4rem;
+		padding: 0.7rem 0 0.8rem;
+		background: url('/ink/line-track.svg') left bottom / 100% 6px no-repeat;
+	}
+	.practice-label {
+		font: 400 0.9rem/1 var(--display);
+		letter-spacing: 0.08em;
+		color: var(--shu);
+	}
+	.level-name {
+		font: 400 1.1rem/1.2 var(--display);
+		letter-spacing: 0.03em;
+		color: var(--ink);
+	}
+	.record {
+		font: 400 0.95rem/1.4 var(--mincho);
+		color: var(--ink-faint);
 	}
 
 	/* ── board ──────────────────────────────────────────── */

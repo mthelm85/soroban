@@ -44,6 +44,15 @@ Each problem can be worked two ways, switched beside the playback controls:
   hidden too, since each would give the moves away. At the last step the
   answer is typed from memory and checked, with a count of the steps revealed.
 
+**Practice** (練習) deals fresh problems at a chosen level, graded the way
+soroban schools grade them: direct moves only, then five-complements, then
+carries and borrows, then more digits and longer chains, then multiplication
+and division. Every dealt problem is solved by the engine first and kept only
+if its moves fit the level, so a "Fives" problem always needs a
+five-complement and never a carry (`src/lib/soroban/practice.ts`). Answers
+given from memory are recorded per level in the browser; five in a row, each
+with at most one step revealed, suggests moving up.
+
 The site is in English at `/` and Japanese at `/ja`. The language link in the
 header carries the current problem across.
 

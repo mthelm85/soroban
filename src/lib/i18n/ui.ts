@@ -1,4 +1,5 @@
 import type { Locale } from '../soroban/messages';
+import type { LevelId } from '../soroban/practice';
 
 /** Interface text for the page around the board. Engine narration lives in soroban/messages. */
 export interface UiText {
@@ -48,6 +49,18 @@ export interface UiText {
 	yourAnswer: (guess: string) => string;
 	/** How many steps were revealed on the way. */
 	peeks: (revealed: number, total: number) => string;
+	/** Practice: problems dealt at a chosen level. */
+	practice: string;
+	levels: Record<LevelId, { name: string; hint: string }>;
+	nextProblem: string;
+	endPractice: string;
+	/** Before any problem at the level has been answered from memory. */
+	practiceStart: string;
+	/** Results at this level: right answers among the last few from memory. */
+	practiceRecord: (correct: number, count: number) => string;
+	/** Five in a row from memory, with the next level's name. */
+	readyToMoveUp: (next: string) => string;
+	moveUp: string;
 	failed: string;
 	/** Link to the other language version. */
 	switchLabel: string;
@@ -117,6 +130,26 @@ export const UI: Record<Locale, UiText> = {
 			revealed === 0
 				? 'Every step from memory — none revealed.'
 				: `${revealed} of ${total} steps revealed.`,
+		practice: 'Practice',
+		levels: {
+			'first-beads': { name: 'First beads', hint: 'Direct moves only, no complements' },
+			fives: { name: 'Fives', hint: 'Every problem needs a five-complement' },
+			tens: { name: 'Tens', hint: 'Every problem carries or borrows' },
+			'two-digits': { name: 'Two digits', hint: 'Two 2-digit numbers' },
+			chains: { name: 'Chains', hint: 'Four 2-digit numbers, + and −' },
+			'long-chains': { name: 'Long chains', hint: 'Five numbers of 2–3 digits' },
+			'mul-2x1': { name: 'Multiply 2 × 1', hint: '2 digits by 1 digit' },
+			'mul-2x2': { name: 'Multiply 2 × 2', hint: '2 digits by 2 digits' },
+			'mul-3x2': { name: 'Multiply 3 × 2', hint: '3 digits by 2 digits' },
+			'div-1': { name: 'Divide by 1 digit', hint: 'Comes out exactly' },
+			'div-2': { name: 'Divide by 2 digits', hint: 'Comes out exactly' }
+		},
+		nextProblem: 'Next problem',
+		endPractice: 'End practice',
+		practiceStart: 'Work it from memory to have it counted.',
+		practiceRecord: (correct, count) => `${correct} of the last ${count} right from memory`,
+		readyToMoveUp: (next) => `Five in a row from memory. Ready for ${next}.`,
+		moveUp: 'Move up',
 		failed: 'Something went wrong working that out.',
 		switchLabel: '日本語',
 		switchPath: '/ja'
@@ -172,6 +205,26 @@ export const UI: Record<Locale, UiText> = {
 			revealed === 0
 				? '1手も表示せずに、すべて頭の中で進めました。'
 				: `全${total}手のうち、${revealed}手を表示しました。`,
+		practice: '練習',
+		levels: {
+			'first-beads': { name: '入門', hint: '補数を使わない入れ払いだけ' },
+			fives: { name: '五の合成・分解', hint: '必ず5の補数を使う' },
+			tens: { name: '十の繰り上がり・繰り下がり', hint: '必ず繰り上がりか繰り下がりがある' },
+			'two-digits': { name: '2けたの足し引き', hint: '2けたの数を2口' },
+			chains: { name: '見取り算（2けた4口）', hint: '2けたの数を4口、足し算と引き算' },
+			'long-chains': { name: '見取り算（3けた5口）', hint: '2〜3けたの数を5口' },
+			'mul-2x1': { name: 'かけ算 2けた×1けた', hint: '両落としで' },
+			'mul-2x2': { name: 'かけ算 2けた×2けた', hint: '両落としで' },
+			'mul-3x2': { name: 'かけ算 3けた×2けた', hint: '両落としで' },
+			'div-1': { name: 'わり算 わる数1けた', hint: '割り切れる問題' },
+			'div-2': { name: 'わり算 わる数2けた', hint: '割り切れる問題' }
+		},
+		nextProblem: '次の問題',
+		endPractice: '練習を終える',
+		practiceStart: '「思い出す」で解くと記録されます。',
+		practiceRecord: (correct, count) => `思い出して解いた直近${count}問のうち${correct}問正解`,
+		readyToMoveUp: (next) => `5問続けて正解です。次は「${next}」へ。`,
+		moveUp: '次へ進む',
 		failed: '計算中にエラーが起きました。',
 		switchLabel: 'English',
 		switchPath: '/'
