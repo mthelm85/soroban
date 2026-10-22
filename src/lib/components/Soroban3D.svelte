@@ -106,7 +106,7 @@
 <div class="frame">
 	<div class="stage" bind:this={host} class:ready class:veiled aria-hidden={veiled}></div>
 
-	{#if veiled && ready}
+	{#if veiled && ready && veilLabel}
 		<!-- The board is in the mind now: an empty circle where it stood. -->
 		<div class="veil">
 			<img src="/enso.svg" alt="" />

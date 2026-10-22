@@ -61,6 +61,36 @@ export interface UiText {
 	/** Five in a row from memory, with the next level's name. */
 	readyToMoveUp: (next: string) => string;
 	moveUp: string;
+	/** Stage ③: the chain flashed or read aloud, the beads gone entirely. */
+	modeFlash: string;
+	modeRead: string;
+	/** Why the drills are unavailable for multiplication and division. */
+	drillsAddSubOnly: string;
+	flashIntro: string;
+	readIntro: string;
+	begin: string;
+	again: string;
+	watchIt: string;
+	listening: string;
+	noSpeech: string;
+	noVoice: string;
+	/** The pace setting, shown as seconds per number while flashing. */
+	perNumber: (seconds: number) => string;
+	/** How many numbers in a practice chain (口数). */
+	numbersLabel: string;
+	recordFlash: (correct: number, count: number) => string;
+	recordRead: (correct: number, count: number) => string;
+	practiceStartDrill: string;
+	/** Language of the reading voice. */
+	voiceLang: string;
+	/** How a chain is read aloud: in Japanese, as soroban schools read it. */
+	speech: {
+		open: string;
+		first: (n: string) => string;
+		add: (n: string, afterSubtract: boolean) => string;
+		subtract: (n: string) => string;
+		close: string;
+	};
 	failed: string;
 	/** Link to the other language version. */
 	switchLabel: string;
@@ -150,6 +180,32 @@ export const UI: Record<Locale, UiText> = {
 		practiceRecord: (correct, count) => `${correct} of the last ${count} right from memory`,
 		readyToMoveUp: (next) => `Five in a row from memory. Ready for ${next}.`,
 		moveUp: 'Move up',
+		modeFlash: 'Flash',
+		modeRead: 'Read aloud',
+		drillsAddSubOnly: 'Flash and read-aloud drills are for addition and subtraction.',
+		flashIntro:
+			'The numbers will flash one at a time where the board was. Keep the total on the soroban in your mind, then give the answer.',
+		readIntro:
+			'Close your eyes and listen. Keep the total on the soroban in your mind, then give the answer.',
+		begin: 'Begin',
+		again: 'Again',
+		watchIt: 'Watch it worked',
+		listening: 'Listening',
+		noSpeech: 'This browser cannot read aloud.',
+		noVoice: 'No English voice was found on this device, so the reading may sound wrong.',
+		perNumber: (seconds) => `${seconds} s each`,
+		numbersLabel: 'Numbers',
+		recordFlash: (correct, count) => `${correct} of the last ${count} right by flash`,
+		recordRead: (correct, count) => `${correct} of the last ${count} right by ear`,
+		practiceStartDrill: 'Every answer here is counted.',
+		voiceLang: 'en-US',
+		speech: {
+			open: 'Ready.',
+			first: (n) => `${n}.`,
+			add: (n) => `plus ${n}.`,
+			subtract: (n) => `minus ${n}.`,
+			close: "That's all."
+		},
 		failed: 'Something went wrong working that out.',
 		switchLabel: '日本語',
 		switchPath: '/ja'
@@ -225,6 +281,31 @@ export const UI: Record<Locale, UiText> = {
 		practiceRecord: (correct, count) => `思い出して解いた直近${count}問のうち${correct}問正解`,
 		readyToMoveUp: (next) => `5問続けて正解です。次は「${next}」へ。`,
 		moveUp: '次へ進む',
+		modeFlash: 'フラッシュ',
+		modeRead: '読み上げ',
+		drillsAddSubOnly: 'フラッシュと読み上げは、足し算・引き算の練習です。',
+		flashIntro:
+			'盤のあった場所に、数字が1つずつ表示されます。頭の中のそろばんで合計を出し、答えを入れてください。',
+		readIntro: '目を閉じて聞いてください。頭の中のそろばんで合計を出し、答えを入れてください。',
+		begin: '始める',
+		again: 'もう一度',
+		watchIt: '盤で見る',
+		listening: '読み上げ中',
+		noSpeech: 'このブラウザは読み上げに対応していません。',
+		noVoice: 'この端末に日本語の音声が見つからないため、正しく読み上げられない場合があります。',
+		perNumber: (seconds) => `1口${seconds}秒`,
+		numbersLabel: '口数',
+		recordFlash: (correct, count) => `フラッシュで直近${count}問のうち${correct}問正解`,
+		recordRead: (correct, count) => `読み上げで直近${count}問のうち${correct}問正解`,
+		practiceStartDrill: 'ここでの答えはすべて記録されます。',
+		voiceLang: 'ja-JP',
+		speech: {
+			open: '願いましては',
+			first: (n) => `${n}円なり`,
+			add: (n, afterSubtract) => (afterSubtract ? `加えて${n}円なり` : `${n}円なり`),
+			subtract: (n) => `引いては${n}円なり`,
+			close: 'では'
+		},
 		failed: '計算中にエラーが起きました。',
 		switchLabel: 'English',
 		switchPath: '/'

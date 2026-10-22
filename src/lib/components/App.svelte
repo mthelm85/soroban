@@ -5,15 +5,20 @@
 	import Soroban3D from '#lib/components/Soroban3D.svelte';
 	import StepList from '#lib/components/StepList.svelte';
 	import InkMenu from '#lib/components/InkMenu.svelte';
+	import Drill, { type DrillText } from '#lib/components/Drill.svelte';
 	import {
 		LEVELS,
 		dealProblem,
+		dealsChains,
 		nextLevel,
 		type LevelId
 	} from '#lib/soroban/practice.js';
 	import { EXAMPLES, UI } from '#lib/i18n/ui.js';
 	import {
+		decToString,
 		formatSpan,
+		messagesFor,
+		parseProblem,
 		solve,
 		TECHNIQUES,
 		type Board,
@@ -73,7 +78,13 @@
 	 * each move and revealing it to check. Every step carries the board before
 	 * and after it, so each one can be checked exactly, not just the answer.
 	 */
-	let mode = $state<'watch' | 'recall'>('watch');
+	/*
+	 * Stage ③: flash and read aloud. The beads are gone entirely; the chain is
+	 * flashed where the board stood, or spoken, and worked on the soroban in
+	 * the mind alone. Both are for addition and subtraction, as in schools.
+	 */
+	type Mode = 'watch' | 'recall' | 'flash' | 'read';
+	let mode = $state<Mode>('watch');
 	/** Steps the learner has revealed while recalling. */
 	const revealed = new SvelteSet<number>();
 	let guess = $state('');
@@ -85,15 +96,29 @@
 	 * soroban/practice.ts). Answers given from memory are kept per level in
 	 * this browser, and five in a row suggests moving up.
 	 */
+	type Recorded = 'recall' | 'flash' | 'read';
 	interface Result {
 		correct: boolean;
 		revealed: number;
 		total: number;
+		/** How the answer was reached; results saved before the drills were recall. */
+		mode?: Recorded;
 	}
 	let practiceLevel = $state<LevelId | null>(null);
 	let results = $state<Partial<Record<LevelId, Result[]>>>({});
+	/** How many numbers a practice chain has in the drills (口数). */
+	let chainCount = $state(5);
+	const CHAIN_COUNTS = [3, 5, 10, 15];
 
-	const recent = $derived(practiceLevel ? (results[practiceLevel] ?? []).slice(-STREAK) : []);
+	/** Which results the practice bar speaks for: watching counts as recall's. */
+	const recordedAs = $derived<Recorded>(mode === 'watch' ? 'recall' : mode);
+	const recent = $derived(
+		practiceLevel
+			? (results[practiceLevel] ?? [])
+					.filter((r) => (r.mode ?? 'recall') === recordedAs)
+					.slice(-STREAK)
+			: []
+	);
 	const following = $derived(practiceLevel ? nextLevel(practiceLevel) : null);
 	/** Five answers in a row from memory, each right with at most one step revealed. */
 	const readyToMoveUp = $derived(
@@ -106,8 +131,15 @@
 	const step = $derived(index >= 0 ? (steps[index] ?? null) : null);
 	const atEnd = $derived(index >= steps.length - 1);
 	const recall = $derived(mode === 'recall');
-	/** Whether the current step is in view: always when watching, once revealed when recalling. */
-	const shown = $derived(!recall || verdict !== null || (index >= 0 && revealed.has(index)));
+	const drill = $derived(mode === 'flash' || mode === 'read');
+	const drillable = $derived(solution?.operation === 'addsub');
+	/**
+	 * Whether the current step is in view: always when watching, once revealed
+	 * when recalling, and never in a drill, where there is no board at all.
+	 */
+	const shown = $derived(
+		mode === 'watch' || (recall && (verdict !== null || (index >= 0 && revealed.has(index))))
+	);
 	/**
 	 * A hidden step holds the board as it was before its move, so revealing it
 	 * plays the move in front of the learner — beads, sound and all.
@@ -152,10 +184,52 @@
 		verdict = null;
 	}
 
-	function setMode(next: 'watch' | 'recall') {
+	function setMode(next: Mode) {
 		if (next === mode) return;
+		const wasDrill = drill;
 		mode = next;
 		startOver();
+		// Entering a drill while practising deals a chain of the chosen length.
+		if (!wasDrill && drill && practiceLevel && dealsChains(practiceLevel)) deal();
+	}
+
+	// The drills are for addition and subtraction; anything else goes back to watching.
+	$effect(() => {
+		if (drill && solution && !drillable) mode = 'watch';
+	});
+
+	/** The chain as the drills present it: each number with its sign. */
+	const drillTerms = $derived.by(() => {
+		if (!solution || !drillable) return [];
+		const parsed = parseProblem(solution.problem, messagesFor(locale));
+		return parsed.terms.map((t) => ({ op: t.op, text: decToString(t.value) }));
+	});
+
+	const drillText = $derived<DrillText>({
+		begin: ui.begin,
+		again: ui.again,
+		check: ui.check,
+		correct: ui.correct,
+		yourAnswer: ui.yourAnswer,
+		answerLabel: ui.answer,
+		recallAnswer: ui.recallAnswer,
+		watchIt: ui.watchIt,
+		nextProblem: ui.nextProblem,
+		listening: ui.listening,
+		noSpeech: ui.noSpeech,
+		noVoice: ui.noVoice,
+		speech: ui.speech
+	});
+
+	/** Keep a practice result, under the way it was reached. */
+	function record(correct: boolean, peeked: number, how: Recorded) {
+		if (!practiceLevel) return;
+		const kept = [
+			...(results[practiceLevel] ?? []),
+			{ correct, revealed: peeked, total: steps.length, mode: how }
+		].slice(-KEPT);
+		results = { ...results, [practiceLevel]: kept };
+		remember(PRACTICE_KEY, JSON.stringify(results));
 	}
 
 	function reveal() {
@@ -167,20 +241,14 @@
 	function check() {
 		if (!guess.trim()) return;
 		verdict = { correct: sameNumber(guess, finalAnswer), guess: guess.trim() };
-		if (practiceLevel) {
-			const kept = [
-				...(results[practiceLevel] ?? []),
-				{ correct: verdict.correct, revealed: revealed.size, total: steps.length }
-			].slice(-KEPT);
-			results = { ...results, [practiceLevel]: kept };
-			remember(PRACTICE_KEY, JSON.stringify(results));
-		}
+		record(verdict.correct, revealed.size, 'recall');
 	}
 
 	/** Deal a fresh problem at the current level, never the one just worked. */
 	function deal() {
 		if (!practiceLevel) return;
-		const problem = dealProblem(practiceLevel, Math.random, solution?.problem);
+		const count = drill && dealsChains(practiceLevel) ? chainCount : undefined;
+		const problem = dealProblem(practiceLevel, Math.random, solution?.problem, count);
 		input = problem;
 		run(problem);
 	}
@@ -336,6 +404,7 @@
 	function onkeydown(event: KeyboardEvent) {
 		const target = event.target as HTMLElement | null;
 		if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+		if (drill && event.key !== 'Escape') return;
 		if (event.key === 'ArrowRight') {
 			playing = false;
 			go(index + 1);
@@ -450,11 +519,33 @@
 					{#if readyToMoveUp && following}
 						{ui.readyToMoveUp(ui.levels[following.id].name)}
 					{:else if recent.length}
-						{ui.practiceRecord(recent.filter((r) => r.correct).length, recent.length)}
+						{@const right = recent.filter((r) => r.correct).length}
+						{recordedAs === 'flash'
+							? ui.recordFlash(right, recent.length)
+							: recordedAs === 'read'
+								? ui.recordRead(right, recent.length)
+								: ui.practiceRecord(right, recent.length)}
 					{:else}
-						{ui.practiceStart}
+						{drill ? ui.practiceStartDrill : ui.practiceStart}
 					{/if}
 				</span>
+				{#if drill && dealsChains(practiceLevel)}
+					<span class="counts" role="radiogroup" aria-label={ui.numbersLabel}>
+						<span class="counts-label">{ui.numbersLabel}</span>
+						{#each CHAIN_COUNTS as count (count)}
+							<button
+								type="button"
+								role="radio"
+								aria-checked={chainCount === count}
+								class:active={chainCount === count}
+								onclick={() => {
+									chainCount = count;
+									deal();
+								}}>{count}</button
+							>
+						{/each}
+					</span>
+				{/if}
 				<span class="spacer"></span>
 				{#if readyToMoveUp && following}
 					<button type="button" class="reveal" onclick={() => following && practise(following.id)}
@@ -480,9 +571,23 @@
 					{speed}
 					muted={!soundOn || !shown}
 					veiled={!shown}
-					veilLabel={ui.modeRecall}
+					veilLabel={drill ? '' : ui.modeRecall}
 					loadingLabel={ui.loading}
 				/>
+				{#if drill && drillable}
+					<Drill
+						kind={mode === 'read' ? 'read' : 'flash'}
+						terms={drillTerms}
+						answer={finalAnswer}
+						pace={speed}
+						voiceLang={ui.voiceLang}
+						text={drillText}
+						same={sameNumber}
+						onresult={(correct) => record(correct, 0, mode === 'read' ? 'read' : 'flash')}
+						onwatch={() => setMode('watch')}
+						onnext={practiceLevel ? deal : null}
+					/>
+				{/if}
 			</div>
 
 			<div class="controls">
@@ -490,8 +595,8 @@
 					<button
 						type="button"
 						role="radio"
-						aria-checked={!recall}
-						class:active={!recall}
+						aria-checked={mode === 'watch'}
+						class:active={mode === 'watch'}
 						onclick={() => setMode('watch')}>{ui.modeWatch}</button
 					>
 					<button
@@ -501,8 +606,27 @@
 						class:active={recall}
 						onclick={() => setMode('recall')}>{ui.modeRecall}</button
 					>
+					<button
+						type="button"
+						role="radio"
+						aria-checked={mode === 'flash'}
+						class:active={mode === 'flash'}
+						disabled={!drillable}
+						title={drillable ? undefined : ui.drillsAddSubOnly}
+						onclick={() => setMode('flash')}>{ui.modeFlash}</button
+					>
+					<button
+						type="button"
+						role="radio"
+						aria-checked={mode === 'read'}
+						class:active={mode === 'read'}
+						disabled={!drillable}
+						title={drillable ? undefined : ui.drillsAddSubOnly}
+						onclick={() => setMode('read')}>{ui.modeRead}</button
+					>
 				</div>
 
+				{#if !drill}
 				<div class="transport">
 					<button
 						type="button"
@@ -554,6 +678,7 @@
 				</div>
 
 				<span class="tally">{index + 1}<span class="of">/</span>{steps.length}</span>
+				{/if}
 
 				<label class="dial" title={ui.speed}>
 					<input
@@ -564,6 +689,7 @@
 						aria-label={ui.speed}
 						bind:value={speed}
 					/>
+					{#if mode === 'flash'}<span>{ui.perNumber(Math.round(15 / speed) / 10)}</span>{/if}
 				</label>
 
 				{#if solution.operation === 'divide'}
@@ -602,7 +728,13 @@
 				<div class="explain" aria-live="polite">
 					<div class="pane" class:current={pane === 'start'}>
 						<p class="action resting">
-							{recall ? ui.recallReady(solution.problem) : ui.resting}
+							{mode === 'flash'
+								? ui.flashIntro
+								: mode === 'read'
+									? ui.readIntro
+									: recall
+										? ui.recallReady(solution.problem)
+										: ui.resting}
 						</p>
 					</div>
 
@@ -935,6 +1067,30 @@
 		letter-spacing: 0.03em;
 		color: var(--ink);
 	}
+	/* 口数: how many numbers in a drilled chain. */
+	.counts {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.7rem;
+	}
+	.counts-label {
+		font: 400 0.9rem/1 var(--display);
+		letter-spacing: 0.04em;
+		color: var(--ink-faint);
+	}
+	.counts button {
+		padding: 0.15rem 0.1rem 0.4rem;
+		border: 0;
+		background: none;
+		font: 400 1rem/1 var(--mincho);
+		color: var(--ink-faint);
+		cursor: pointer;
+	}
+	.counts button.active {
+		color: var(--ink);
+		background: url('/ink/line-tab.svg') left bottom / 100% 5px no-repeat;
+	}
+
 	.record {
 		font: 400 0.95rem/1.4 var(--mincho);
 		color: var(--ink-faint);
@@ -948,6 +1104,7 @@
 	 * camera fit (which includes the labels) does the rest.
 	 */
 	.board {
+		position: relative;
 		aspect-ratio: 2.3;
 		max-height: 64vh;
 		min-height: 17rem;
@@ -995,6 +1152,10 @@
 	}
 	.modes button:hover {
 		color: var(--ink);
+	}
+	.modes button:disabled {
+		color: var(--ink-ghost);
+		cursor: default;
 	}
 	.modes button.active {
 		color: var(--ink);

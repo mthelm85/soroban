@@ -87,3 +87,26 @@ describe('practice levels', () => {
 		expect(levelById('tens').track).toBe('addsub');
 	});
 });
+
+describe('chains of a chosen length', () => {
+	for (const level of LEVELS.filter((l) => l.term)) {
+		it(`${level.id}: deals chains of 3, 10 and 15 numbers that fit the level`, () => {
+			const rng = seeded(level.id.length * 104729);
+			for (const count of [3, 10, 15]) {
+				for (let i = 0; i < 4; i++) {
+					const problem = dealProblem(level.id, rng, undefined, count);
+					expect(problem.split(/ [+−] /).length, problem).toBe(count);
+					expect(fitsLevel(level, problem), problem).toBe(true);
+				}
+			}
+		});
+	}
+
+	it('keeps a long "fives" chain free of carries', () => {
+		const rng = seeded(77);
+		for (let i = 0; i < 5; i++) {
+			const techniques = moves(dealProblem('fives', rng, undefined, 15));
+			expect(techniques.some((t) => t.startsWith('ten-'))).toBe(false);
+		}
+	});
+});
