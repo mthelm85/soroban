@@ -18,6 +18,7 @@
 		TECHNIQUES,
 		type Board,
 		type Locale,
+		type Step,
 		type Solution
 	} from '#lib/soroban/index.js';
 
@@ -196,15 +197,22 @@
 	}
 
 	/** Show the group's reasoning once, on the first step that belongs to it. */
-	const showGroupWhy = $derived(
-		!!step && step.groupWhy !== '' && steps[index - 1]?.group !== step.group
-	);
+	function opensGroup(i: number): boolean {
+		return steps[i].groupWhy !== '' && steps[i - 1]?.group !== steps[i].group;
+	}
 
-	const technique = $derived(step ? TECHNIQUES[step.technique] : null);
-	const phaseTechnique = $derived(
-		step?.phaseTechnique && step.phaseTechnique !== step.technique
-			? TECHNIQUES[step.phaseTechnique]
-			: null
+	/** The phase a step belongs to, when it is a different technique from the step's own. */
+	function phaseOf(s: Step) {
+		return s.phaseTechnique && s.phaseTechnique !== s.technique ? TECHNIQUES[s.phaseTechnique] : null;
+	}
+
+	/**
+	 * Which explanation is in view. Every one is laid out in the same place and
+	 * only this one is shown, so the area keeps the height of the tallest and
+	 * nothing below it moves as the steps play.
+	 */
+	const pane = $derived<'start' | 'prompt' | number>(
+		index < 0 ? 'start' : recall && !shown ? 'prompt' : index
 	);
 
 	const switchHref = $derived(`${ui.switchPath}?q=${encodeURIComponent(input)}`);
@@ -543,87 +551,94 @@
 			<div class="stroke" aria-hidden="true"></div>
 
 			<section class="reading">
-				<div class="explain">
-					{#if recall && !shown}
-						<div class="recall" aria-live="polite">
-							{#if step}
-								<p class="recall-section">{step.section}</p>
-								<p class="action resting">{ui.recallPrompt}</p>
-								<div class="recall-actions">
-									<button type="button" class="reveal" onclick={reveal}>{ui.reveal}</button>
-								</div>
-								{#if asking}
-									<form
-										class="guess"
-										onsubmit={(event) => {
-											event.preventDefault();
-											check();
-										}}
-									>
-										<label for="guess">{ui.recallAnswer}</label>
-										<div class="guess-row">
-											<input
-												id="guess"
-												type="text"
-												inputmode="decimal"
-												autocomplete="off"
-												spellcheck="false"
-												bind:value={guess}
-											/>
-											<button type="submit" class="solve">{ui.check}</button>
-										</div>
-									</form>
-								{/if}
-							{:else}
-								<p class="action resting">{ui.recallReady(solution.problem)}</p>
-							{/if}
-						</div>
-					{:else if step}
-						<p class="action">
-							<span class="formula">{step.formula}</span>
-							{step.text}
+				<div class="explain" aria-live="polite">
+					<div class="pane" class:current={pane === 'start'}>
+						<p class="action resting">
+							{recall ? ui.recallReady(solution.problem) : ui.resting}
 						</p>
+					</div>
 
-						{#if showGroupWhy}
-							<p class="group">
-								<span class="group-name">{step.group}</span>
-								{step.groupWhy}
+					{#if recall}
+						<!-- Working from memory: where you are, the prompt, and the way to check. -->
+						<div class="pane" class:current={pane === 'prompt'}>
+							<p class="recall-section">{step?.section ?? ''}</p>
+							<p class="action resting">{ui.recallPrompt}</p>
+							<div class="recall-actions">
+								<button type="button" class="reveal" onclick={reveal}>{ui.reveal}</button>
+							</div>
+							<!-- Held in place at every step, so asking for the answer moves nothing. -->
+							<form
+								class="guess"
+								class:held={!asking}
+								onsubmit={(event) => {
+									event.preventDefault();
+									check();
+								}}
+							>
+								<label for="guess">{ui.recallAnswer}</label>
+								<div class="guess-row">
+									<input
+										id="guess"
+										type="text"
+										inputmode="decimal"
+										autocomplete="off"
+										spellcheck="false"
+										bind:value={guess}
+									/>
+									<button type="submit" class="solve">{ui.check}</button>
+								</div>
+							</form>
+						</div>
+					{/if}
+
+					{#each steps as s, i (i)}
+						{@const technique = TECHNIQUES[s.technique]}
+						{@const phase = phaseOf(s)}
+						<div class="pane" class:current={pane === i}>
+							<p class="action">
+								<span class="formula">{s.formula}</span>
+								{s.text}
 							</p>
-						{/if}
 
-						<p class="why"><span class="why-mark">{ui.why}</span>{step.why}</p>
+							{#if opensGroup(i)}
+								<p class="group">
+									<span class="group-name">{s.group}</span>
+									{s.groupWhy}
+								</p>
+							{/if}
 
-						{#if technique}
+							<p class="why"><span class="why-mark">{ui.why}</span>{s.why}</p>
+
 							<p class="technique">
 								<span class="term" lang="ja" title={technique.romaji}>{technique.ja}</span>
 								{#if locale === 'en'}<span class="gloss">{technique.en}</span>{/if}
-								{#if phaseTechnique}
-									<span class="term phase" lang="ja" title={phaseTechnique.romaji}
-										>{phaseTechnique.ja}</span
-									>
-									<span class="rule">{phaseTechnique.rule}</span>
+								{#if phase}
+									<span class="term phase" lang="ja" title={phase.romaji}>{phase.ja}</span>
+									<span class="rule">{phase.rule}</span>
 								{/if}
 							</p>
-						{/if}
-					{:else}
-						<p class="action resting">{ui.resting}</p>
-					{/if}
+						</div>
+					{/each}
 				</div>
 
-				{#if answer !== null}
-					<p class="answer">
-						<span class="answer-label">{ui.answer}</span>
-						<strong>{answer}</strong>
-						{#if recall}
-							{#if verdict}
-								<span class="verdict" class:wrong={!verdict.correct}
-									>{verdict.correct ? ui.correct : ui.yourAnswer(verdict.guess)}</span
-								>
-							{/if}
-							<span class="peeks">{ui.peeks(revealed.size, steps.length)}</span>
-						{/if}
-					</p>
-				{/if}
+				<!--
+					The answer's column is held from the first step, so the text beside it
+					keeps one width and never re-wraps when the answer arrives.
+				-->
+				<p class="answer" class:held={answer === null}>
+					<span class="answer-label">{ui.answer}</span>
+					<strong>{answer ?? finalAnswer}</strong>
+					{#if recall}
+						<span class="verdict" class:wrong={verdict && !verdict.correct} class:held={!verdict}
+							>{verdict
+								? verdict.correct
+									? ui.correct
+									: ui.yourAnswer(verdict.guess)
+								: ui.correct}</span
+						>
+						<span class="peeks">{ui.peeks(revealed.size, steps.length)}</span>
+					{/if}
+				</p>
 			</section>
 		{/if}
 	</div>
@@ -964,8 +979,11 @@
 		color: var(--ink);
 	}
 
+	/* Figures of one width, and room for three digits, so nothing beside it shifts. */
 	.tally {
+		min-width: 4.8em;
 		font: 400 1.05rem/1 var(--mincho);
+		font-variant-numeric: tabular-nums;
 		color: var(--ink-faint);
 	}
 	.tally .of {
@@ -1049,7 +1067,20 @@
 	}
 
 	.explain {
+		display: grid;
 		max-width: 66ch;
+	}
+	/* Every pane in the one cell; only the current one is seen. */
+	.pane {
+		grid-area: 1 / 1;
+		visibility: hidden;
+	}
+	.pane.current {
+		visibility: visible;
+	}
+	/* Holds its space without being seen, heard or reached. */
+	.held {
+		visibility: hidden;
 	}
 
 	.action {
@@ -1174,23 +1205,22 @@
 	}
 
 	.answer {
-		animation: arrive 0.6s ease-out;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
 		gap: 0.5rem;
 		margin: 0;
 		text-align: right;
+		transition: opacity 0.6s ease;
 	}
-	@keyframes arrive {
-		from {
-			opacity: 0;
-			transform: translateY(4px);
-		}
+	/* Held answers fade in where they already stood: nothing moves to make room. */
+	.answer.held {
+		opacity: 0;
+		transition: none;
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.answer {
-			animation: none;
+			transition: none;
 		}
 	}
 	.answer-label {
