@@ -1,0 +1,5 @@
+# Keep every text file LF, in the repository and the working tree, whatever
+# the local git settings; Windows tools otherwise mix in CRLF.
+* text=auto eol=lf
+
+*.hdr binary
