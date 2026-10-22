@@ -64,10 +64,11 @@ export interface UiText {
 	/** Stage ③: the chain flashed or read aloud, the beads gone entirely. */
 	modeFlash: string;
 	modeRead: string;
-	/** Why the drills are unavailable for multiplication and division. */
-	drillsAddSubOnly: string;
 	flashIntro: string;
 	readIntro: string;
+	/** The same, for a whole multiplication or division. */
+	flashIntroWhole: string;
+	readIntroWhole: string;
 	begin: string;
 	again: string;
 	watchIt: string;
@@ -76,6 +77,8 @@ export interface UiText {
 	noVoice: string;
 	/** The pace setting, shown as seconds per number while flashing. */
 	perNumber: (seconds: number) => string;
+	/** …or, for a whole problem, how long it stays. */
+	perProblem: (seconds: number) => string;
 	/** How many numbers in a practice chain (口数). */
 	numbersLabel: string;
 	recordFlash: (correct: number, count: number) => string;
@@ -83,13 +86,16 @@ export interface UiText {
 	practiceStartDrill: string;
 	/** Language of the reading voice. */
 	voiceLang: string;
-	/** How a chain is read aloud: in Japanese, as soroban schools read it. */
+	/** How a problem is read aloud: in Japanese, as soroban schools read it. */
 	speech: {
 		open: string;
 		first: (n: string) => string;
 		add: (n: string, afterSubtract: boolean) => string;
 		subtract: (n: string) => string;
 		close: string;
+		ready: string;
+		times: (a: string, b: string) => string;
+		divide: (a: string, b: string) => string;
 	};
 	failed: string;
 	/** Link to the other language version. */
@@ -182,11 +188,14 @@ export const UI: Record<Locale, UiText> = {
 		moveUp: 'Move up',
 		modeFlash: 'Flash',
 		modeRead: 'Read aloud',
-		drillsAddSubOnly: 'Flash and read-aloud drills are for addition and subtraction.',
 		flashIntro:
 			'The numbers will flash one at a time where the board was. Keep the total on the soroban in your mind, then give the answer.',
 		readIntro:
 			'Close your eyes and listen. Keep the total on the soroban in your mind, then give the answer.',
+		flashIntroWhole:
+			'The problem will appear once where the board was, then vanish. Work it on the soroban in your mind, then give the answer.',
+		readIntroWhole:
+			'Close your eyes and listen. Work the problem on the soroban in your mind, then give the answer.',
 		begin: 'Begin',
 		again: 'Again',
 		watchIt: 'Watch it worked',
@@ -194,6 +203,7 @@ export const UI: Record<Locale, UiText> = {
 		noSpeech: 'This browser cannot read aloud.',
 		noVoice: 'No English voice was found on this device, so the reading may sound wrong.',
 		perNumber: (seconds) => `${seconds} s each`,
+		perProblem: (seconds) => `shown ${seconds} s`,
 		numbersLabel: 'Numbers',
 		recordFlash: (correct, count) => `${correct} of the last ${count} right by flash`,
 		recordRead: (correct, count) => `${correct} of the last ${count} right by ear`,
@@ -204,7 +214,10 @@ export const UI: Record<Locale, UiText> = {
 			first: (n) => `${n}.`,
 			add: (n) => `plus ${n}.`,
 			subtract: (n) => `minus ${n}.`,
-			close: "That's all."
+			close: "That's all.",
+			ready: 'Ready.',
+			times: (a, b) => `${a} times ${b}.`,
+			divide: (a, b) => `${a} divided by ${b}.`
 		},
 		failed: 'Something went wrong working that out.',
 		switchLabel: '日本語',
@@ -283,10 +296,12 @@ export const UI: Record<Locale, UiText> = {
 		moveUp: '次へ進む',
 		modeFlash: 'フラッシュ',
 		modeRead: '読み上げ',
-		drillsAddSubOnly: 'フラッシュと読み上げは、足し算・引き算の練習です。',
 		flashIntro:
 			'盤のあった場所に、数字が1つずつ表示されます。頭の中のそろばんで合計を出し、答えを入れてください。',
 		readIntro: '目を閉じて聞いてください。頭の中のそろばんで合計を出し、答えを入れてください。',
+		flashIntroWhole:
+			'盤のあった場所に問題が一度だけ表示され、消えます。頭の中のそろばんで計算し、答えを入れてください。',
+		readIntroWhole: '目を閉じて聞いてください。頭の中のそろばんで計算し、答えを入れてください。',
 		begin: '始める',
 		again: 'もう一度',
 		watchIt: '盤で見る',
@@ -294,6 +309,7 @@ export const UI: Record<Locale, UiText> = {
 		noSpeech: 'このブラウザは読み上げに対応していません。',
 		noVoice: 'この端末に日本語の音声が見つからないため、正しく読み上げられない場合があります。',
 		perNumber: (seconds) => `1口${seconds}秒`,
+		perProblem: (seconds) => `${seconds}秒表示`,
 		numbersLabel: '口数',
 		recordFlash: (correct, count) => `フラッシュで直近${count}問のうち${correct}問正解`,
 		recordRead: (correct, count) => `読み上げで直近${count}問のうち${correct}問正解`,
@@ -304,7 +320,10 @@ export const UI: Record<Locale, UiText> = {
 			first: (n) => `${n}円なり`,
 			add: (n, afterSubtract) => (afterSubtract ? `加えて${n}円なり` : `${n}円なり`),
 			subtract: (n) => `引いては${n}円なり`,
-			close: 'では'
+			close: 'では',
+			ready: '',
+			times: (a, b) => `${a}かけることの${b}では`,
+			divide: (a, b) => `${a}わることの${b}では`
 		},
 		failed: '計算中にエラーが起きました。',
 		switchLabel: 'English',

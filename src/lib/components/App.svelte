@@ -5,7 +5,7 @@
 	import Soroban3D from '#lib/components/Soroban3D.svelte';
 	import StepList from '#lib/components/StepList.svelte';
 	import InkMenu from '#lib/components/InkMenu.svelte';
-	import Drill, { type DrillText } from '#lib/components/Drill.svelte';
+	import Drill, { type DrillProblem, type DrillText } from '#lib/components/Drill.svelte';
 	import {
 		LEVELS,
 		dealProblem,
@@ -79,9 +79,9 @@
 	 * and after it, so each one can be checked exactly, not just the answer.
 	 */
 	/*
-	 * Stage ③: flash and read aloud. The beads are gone entirely; the chain is
-	 * flashed where the board stood, or spoken, and worked on the soroban in
-	 * the mind alone. Both are for addition and subtraction, as in schools.
+	 * Stage ③: flash and read aloud. The beads are gone entirely; the problem
+	 * is flashed where the board stood, or spoken, and worked on the soroban in
+	 * the mind alone — a chain number by number, a × or ÷ whole.
 	 */
 	type Mode = 'watch' | 'recall' | 'flash' | 'read';
 	let mode = $state<Mode>('watch');
@@ -132,7 +132,6 @@
 	const atEnd = $derived(index >= steps.length - 1);
 	const recall = $derived(mode === 'recall');
 	const drill = $derived(mode === 'flash' || mode === 'read');
-	const drillable = $derived(solution?.operation === 'addsub');
 	/**
 	 * Whether the current step is in view: always when watching, once revealed
 	 * when recalling, and never in a drill, where there is no board at all.
@@ -193,17 +192,24 @@
 		if (!wasDrill && drill && practiceLevel && dealsChains(practiceLevel)) deal();
 	}
 
-	// The drills are for addition and subtraction; anything else goes back to watching.
-	$effect(() => {
-		if (drill && solution && !drillable) mode = 'watch';
-	});
-
-	/** The chain as the drills present it: each number with its sign. */
-	const drillTerms = $derived.by(() => {
-		if (!solution || !drillable) return [];
+	/** The problem as the drills present it: a chain of signed numbers, or a whole × or ÷. */
+	const drillProblem = $derived.by<DrillProblem | null>(() => {
+		if (!solution) return null;
 		const parsed = parseProblem(solution.problem, messagesFor(locale));
-		return parsed.terms.map((t) => ({ op: t.op, text: decToString(t.value) }));
+		if (parsed.kind === 'addsub') {
+			return {
+				kind: 'chain',
+				terms: parsed.terms.map((t) => ({ op: t.op, text: decToString(t.value) }))
+			};
+		}
+		return {
+			kind: 'whole',
+			a: decToString(parsed.a),
+			op: parsed.kind === 'multiply' ? '×' : '÷',
+			b: decToString(parsed.b)
+		};
 	});
+	const whole = $derived(drillProblem?.kind === 'whole');
 
 	const drillText = $derived<DrillText>({
 		begin: ui.begin,
@@ -574,10 +580,10 @@
 					veilLabel={drill ? '' : ui.modeRecall}
 					loadingLabel={ui.loading}
 				/>
-				{#if drill && drillable}
+				{#if drill && drillProblem}
 					<Drill
 						kind={mode === 'read' ? 'read' : 'flash'}
-						terms={drillTerms}
+						problem={drillProblem}
 						answer={finalAnswer}
 						pace={speed}
 						voiceLang={ui.voiceLang}
@@ -611,8 +617,6 @@
 						role="radio"
 						aria-checked={mode === 'flash'}
 						class:active={mode === 'flash'}
-						disabled={!drillable}
-						title={drillable ? undefined : ui.drillsAddSubOnly}
 						onclick={() => setMode('flash')}>{ui.modeFlash}</button
 					>
 					<button
@@ -620,8 +624,6 @@
 						role="radio"
 						aria-checked={mode === 'read'}
 						class:active={mode === 'read'}
-						disabled={!drillable}
-						title={drillable ? undefined : ui.drillsAddSubOnly}
 						onclick={() => setMode('read')}>{ui.modeRead}</button
 					>
 				</div>
@@ -689,7 +691,11 @@
 						aria-label={ui.speed}
 						bind:value={speed}
 					/>
-					{#if mode === 'flash'}<span>{ui.perNumber(Math.round(15 / speed) / 10)}</span>{/if}
+					{#if mode === 'flash'}<span
+							>{whole
+								? ui.perProblem(Math.round(30 / speed) / 10)
+								: ui.perNumber(Math.round(15 / speed) / 10)}</span
+						>{/if}
 				</label>
 
 				{#if solution.operation === 'divide'}
@@ -729,9 +735,13 @@
 					<div class="pane" class:current={pane === 'start'}>
 						<p class="action resting">
 							{mode === 'flash'
-								? ui.flashIntro
+								? whole
+									? ui.flashIntroWhole
+									: ui.flashIntro
 								: mode === 'read'
-									? ui.readIntro
+									? whole
+										? ui.readIntroWhole
+										: ui.readIntro
 									: recall
 										? ui.recallReady(solution.problem)
 										: ui.resting}
@@ -1152,10 +1162,6 @@
 	}
 	.modes button:hover {
 		color: var(--ink);
-	}
-	.modes button:disabled {
-		color: var(--ink-ghost);
-		cursor: default;
 	}
 	.modes button.active {
 		color: var(--ink);

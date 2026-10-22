@@ -50,8 +50,9 @@ Each problem can be worked two ways, switched beside the playback controls:
   Read aloud, the browser speaks the chain while the page stays empty — in
   Japanese with the phrases soroban schools use (願いましては、…円なり、引いては
   …円なり、…では). Either way the total is kept on the soroban in the mind and
-  typed in to be checked. The speed slider sets the pace. Both are for
-  addition and subtraction.
+  typed in to be checked. The speed slider sets the pace. A multiplication or
+  division is flashed once, whole, and read as schools read it
+  (23かけることの45では、4104わることの76では).
 
 **Practice** (練習) deals fresh problems at a chosen level, graded the way
 soroban schools grade them: direct moves only, then five-complements, then

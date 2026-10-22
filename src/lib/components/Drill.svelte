@@ -1,15 +1,21 @@
 <!--
-	Stage ③ of the path to 暗算: the beads are gone, and the chain is worked on
-	the soroban in the mind alone.
+	Stage ③ of the path to 暗算: the beads are gone, and the problem is worked
+	on the soroban in the mind alone.
 
-	Flash (フラッシュ暗算): the numbers appear one at a time where the board
-	stood, each followed by a moment of blank paper, so a number repeated twice
-	in a row is still seen as two. Read aloud (読み上げ算): the browser speaks
-	the chain, in Japanese with the phrases soroban schools read it in, while
-	the page stays empty and the eyes can close. Either way the answer is then
+	Flash (フラッシュ暗算): a chain's numbers appear one at a time where the
+	board stood, each followed by a moment of blank paper, so a number repeated
+	twice in a row is still seen as two; a multiplication or division appears
+	once, whole, and vanishes. Read aloud (読み上げ算・読み上げ暗算): the browser
+	speaks it, in Japanese with the phrases soroban schools read in, while the
+	page stays empty and the eyes can close. Either way the answer is then
 	given from memory and checked.
 -->
 <script module lang="ts">
+	/** A chain to flash number by number, or a whole × or ÷ problem. */
+	export type DrillProblem =
+		| { kind: 'chain'; terms: { op: '+' | '-'; text: string }[] }
+		| { kind: 'whole'; a: string; op: '×' | '÷'; b: string };
+
 	export interface DrillText {
 		begin: string;
 		again: string;
@@ -23,13 +29,17 @@
 		listening: string;
 		noSpeech: string;
 		noVoice: string;
-		/** The spoken chain: the opening, each number, and the close. */
+		/** The spoken problem: a chain's opening, numbers and close, or a whole × or ÷. */
 		speech: {
 			open: string;
 			first: (n: string) => string;
 			add: (n: string, afterSubtract: boolean) => string;
 			subtract: (n: string) => string;
 			close: string;
+			/** Said before a whole problem; may be empty. */
+			ready: string;
+			times: (a: string, b: string) => string;
+			divide: (a: string, b: string) => string;
 		};
 	}
 </script>
@@ -39,7 +49,7 @@
 
 	interface Props {
 		kind: 'flash' | 'read';
-		terms: { op: '+' | '-'; text: string }[];
+		problem: DrillProblem;
 		answer: string;
 		/** The page's speed setting, 0.4–3; 1 is a comfortable pace. */
 		pace: number;
@@ -56,7 +66,7 @@
 
 	let {
 		kind,
-		terms,
+		problem,
 		answer,
 		pace,
 		voiceLang,
@@ -70,7 +80,8 @@
 	type Phase = 'ready' | 'settle' | 'running' | 'answer' | 'done';
 	let phase = $state<Phase>('ready');
 	/** The number on show while flashing; null for the blank between numbers. */
-	let shown = $state<{ op: '+' | '-'; text: string; first: boolean } | null>(null);
+	/** What is on show while flashing: a number, signed if subtracted, or a whole problem. */
+	let shown = $state<{ text: string; minus: boolean; whole: boolean } | null>(null);
 	let guess = $state('');
 	let verdict = $state<{ correct: boolean; guess: string } | null>(null);
 	let warning = $state('');
@@ -109,13 +120,42 @@
 
 	function flash() {
 		phase = 'running';
+		if (problem.kind === 'whole') {
+			// Long enough to read once — 3 s at the default pace — then gone.
+			const hold = (3000 / pace) | 0;
+			shown = { text: `${problem.a} ${problem.op} ${problem.b}`, minus: false, whole: true };
+			later(hold, () => (shown = null));
+			later(hold + 250, ask);
+			return;
+		}
+		const terms = problem.terms;
 		const each = (1500 / pace) | 0;
 		const gap = Math.max(90, each * 0.18);
 		terms.forEach((term, i) => {
-			later(i * each, () => (shown = { ...term, first: i === 0 }));
+			const minus = term.op === '-' && i > 0;
+			later(i * each, () => (shown = { text: (minus ? '−' : '') + term.text, minus, whole: false }));
 			later(i * each + each - gap, () => (shown = null));
 		});
 		later(terms.length * each, ask);
+	}
+
+	/** What the voice says, line by line. */
+	function script(): string[] {
+		const s = text.speech;
+		if (problem.kind === 'whole') {
+			const said =
+				problem.op === '×' ? s.times(problem.a, problem.b) : s.divide(problem.a, problem.b);
+			return [s.ready, said].filter(Boolean);
+		}
+		const terms = problem.terms;
+		const lines = [s.open];
+		terms.forEach((term, i) => {
+			if (i === 0) lines.push(s.first(term.text));
+			else if (term.op === '-') lines.push(s.subtract(term.text));
+			else lines.push(s.add(term.text, terms[i - 1].op === '-'));
+		});
+		lines.push(s.close);
+		return lines;
 	}
 
 	function voiceFor(lang: string): SpeechSynthesisVoice | null {
@@ -135,14 +175,7 @@
 		phase = 'running';
 		const voice = voiceFor(voiceLang);
 		if (!voice && speechSynthesis.getVoices().length) warning = text.noVoice;
-		const s = text.speech;
-		const lines = [s.open];
-		terms.forEach((term, i) => {
-			if (i === 0) lines.push(s.first(term.text));
-			else if (term.op === '-') lines.push(s.subtract(term.text));
-			else lines.push(s.add(term.text, terms[i - 1].op === '-'));
-		});
-		lines.push(s.close);
+		const lines = script();
 
 		const mine = run;
 		const finish = () => {
@@ -176,7 +209,7 @@
 
 	// A new problem, or a change of drill, starts over from the beginning.
 	$effect(() => {
-		void terms;
+		void problem;
 		void kind;
 		stop();
 		phase = 'ready';
@@ -204,8 +237,8 @@
 		<div class="centre" aria-live="off">
 			{#if kind === 'flash'}
 				{#if shown}
-					<span class="number" class:minus={shown.op === '-' && !shown.first}
-						>{shown.op === '-' && !shown.first ? '−' : ''}{shown.text}</span
+					<span class="number" class:minus={shown.minus} class:whole={shown.whole}
+						>{shown.text}</span
 					>
 				{/if}
 			{:else}
@@ -286,6 +319,11 @@
 	}
 	.number.minus {
 		color: var(--shu);
+	}
+	/* A whole problem is longer than one number, so it is set a little smaller. */
+	.number.whole {
+		font-size: clamp(2.6rem, 8vw, 6.5rem);
+		white-space: nowrap;
 	}
 
 	.listening {
