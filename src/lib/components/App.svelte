@@ -31,7 +31,8 @@
 
 	const ui = $derived(UI[locale]);
 
-	const DEFAULT_PROBLEM = '4104 ÷ 76';
+	// A first problem anyone can follow: a chain with a carry and a borrow.
+	const DEFAULT_PROBLEM = '123 + 456 − 78';
 	const DEFAULT_DECIMALS = 4;
 	const PANEL_KEY = 'soroban:panel';
 	const SOUND_KEY = 'soroban:sound';
@@ -252,9 +253,27 @@
 		revealed.add(index);
 	}
 
+	/**
+	 * Whether an answer given from memory is right. For a division that does
+	 * not come out, the board stops at its decimal places (0.6666…), so any
+	 * answer within one unit of the last place of the true value counts:
+	 * the truncated 0.6666, the rounded 0.6667, or one worked further, 0.66666.
+	 */
+	function matchesAnswer(given: string): boolean {
+		const g = given.normalize('NFKC').replace(/…|\.\.\.$/g, '').trim();
+		if (sameNumber(g, finalAnswer)) return true;
+		if (!solution?.continues) return false;
+		const value = Number(g.replace(/[\s,]/g, '').replace(/−/g, '-'));
+		if (g === '' || Number.isNaN(value)) return false;
+		const parsed = parseProblem(solution.problem, messagesFor(locale));
+		const exact = Number(decToString(parsed.a)) / Number(decToString(parsed.b));
+		const places = (finalAnswer.split('.')[1] ?? '').length;
+		return Math.abs(value - exact) < 10 ** -places + 1e-12;
+	}
+
 	function check() {
 		if (!guess.trim()) return;
-		verdict = { correct: sameNumber(guess, finalAnswer), guess: guess.trim() };
+		verdict = { correct: matchesAnswer(guess), guess: guess.trim() };
 		record(verdict.correct, revealed.size, 'recall');
 	}
 
@@ -270,6 +289,19 @@
 	function practise(level: LevelId) {
 		practiceLevel = level;
 		deal();
+	}
+
+	/** A level's recent results, all ways of working counted together. */
+	function recordHint(level: LevelId): string {
+		const kept = (results[level] ?? []).slice(-STREAK);
+		return kept.length ? ui.recordHint(kept.filter((r) => r.correct).length, kept.length) : '';
+	}
+
+	function clearRecord() {
+		if (!practiceLevel) return;
+		if (!confirm(ui.clearConfirm(ui.levels[practiceLevel].name))) return;
+		results = { ...results, [practiceLevel]: [] };
+		remember(PRACTICE_KEY, JSON.stringify(results));
 	}
 
 	/** Problems typed in or picked from the examples end a practice run. */
@@ -458,10 +490,12 @@
 <div class="app" class:panel-open={panelOpen}>
 	<div class="main">
 		<header>
-			<a class="brand" href={locale === 'en' ? '/' : '/ja'} lang="ja" aria-label="算盤">
-				<span class="logo">算盤</span>
-				<span class="seal" aria-hidden="true">珠</span>
-			</a>
+			<h1 class="masthead">
+				<a class="brand" href={locale === 'en' ? '/' : '/ja'} lang="ja" aria-label="算盤">
+					<span class="logo">算盤</span>
+					<span class="seal" aria-hidden="true">珠</span>
+				</a>
+			</h1>
 
 			<form
 				onsubmit={(event) => {
@@ -500,7 +534,7 @@
 					items={LEVELS.map((level) => ({
 						value: level.id,
 						title: ui.levels[level.id].name,
-						hint: ui.levels[level.id].hint
+						hint: [ui.levels[level.id].hint, recordHint(level.id)].filter(Boolean).join(' · ')
 					}))}
 					onpick={(level) => practise(level as LevelId)}
 					align="end"
@@ -522,7 +556,11 @@
 		</header>
 
 		{#if error}
-			<p class="error" role="alert">{error}</p>
+			<!-- The board below still holds the last problem that worked; say so. -->
+			<p class="error" role="alert">
+				{error}
+				{#if solution}<span class="stale-note">{ui.staleNote(solution.problem)}</span>{/if}
+			</p>
 		{/if}
 
 		{#if practiceLevel}
@@ -567,6 +605,9 @@
 					>
 				{/if}
 				<button type="button" class="solve" onclick={deal}>{ui.nextProblem}</button>
+				{#if results[practiceLevel]?.length}
+					<button type="button" class="quiet" onclick={clearRecord}>{ui.clearRecord}</button>
+				{/if}
 				<button type="button" class="quiet" onclick={() => (practiceLevel = null)}
 					>{ui.endPractice}</button
 				>
@@ -574,7 +615,7 @@
 		{/if}
 
 		{#if solution}
-			<div class="board">
+			<div class="board" class:stale={!!error}>
 				<Soroban3D
 					bind:this={board3d}
 					{board}
@@ -597,7 +638,7 @@
 						pace={speed}
 						voiceLang={ui.voiceLang}
 						text={drillText}
-						same={sameNumber}
+						same={(given) => matchesAnswer(given)}
 						onresult={(correct) => record(correct, 0, mode === 'read' ? 'read' : 'flash')}
 						onwatch={() => setMode('watch')}
 						onnext={practiceLevel ? deal : null}
@@ -605,7 +646,8 @@
 				{/if}
 			</div>
 
-			<div class="controls">
+			<div class="controls" class:stale={!!error}>
+				<div class="controls-row">
 				<div class="modes" role="radiogroup" aria-label={ui.modeLabel}>
 					<button
 						type="button"
@@ -637,6 +679,22 @@
 					>
 				</div>
 
+				<span class="spacer"></span>
+
+				<button
+					type="button"
+					class="quiet sound"
+					class:off={!soundOn}
+					title={ui.soundTitle}
+					aria-pressed={soundOn}
+					onclick={() => setSound(!soundOn)}>{ui.sound}</button
+				>
+				<button type="button" class="quiet" onclick={() => board3d?.resetView()}
+					>{ui.resetView}</button
+				>
+				</div>
+
+				<div class="controls-row">
 				{#if !drill}
 				<div class="transport">
 					<button
@@ -692,6 +750,7 @@
 				{/if}
 
 				<label class="dial" title={ui.speed}>
+					<span class="dial-label">{ui.speedLabel}</span>
 					<input
 						type="range"
 						min="0.4"
@@ -700,15 +759,18 @@
 						aria-label={ui.speed}
 						bind:value={speed}
 					/>
-					{#if mode === 'flash'}<span
-							>{whole
+					<span
+						>{mode === 'flash'
+							? whole
 								? ui.perProblem(Math.round(30 / speed) / 10)
-								: ui.perNumber(Math.round(15 / speed) / 10)}</span
-						>{/if}
+								: ui.perNumber(Math.round(15 / speed) / 10)
+							: ui.speedValue(Math.round(speed * 10) / 10)}</span
+					>
 				</label>
 
 				{#if solution.operation === 'divide'}
 					<label class="dial" title={ui.decimals}>
+						<span class="dial-label">{ui.decimalsLabel}</span>
 						<input
 							type="range"
 							min="0"
@@ -721,25 +783,12 @@
 						<span>{ui.decimalsValue(maxDecimals)}</span>
 					</label>
 				{/if}
-
-				<span class="spacer"></span>
-
-				<button
-					type="button"
-					class="quiet sound"
-					class:off={!soundOn}
-					title={ui.soundTitle}
-					aria-pressed={soundOn}
-					onclick={() => setSound(!soundOn)}>{ui.sound}</button
-				>
-				<button type="button" class="quiet" onclick={() => board3d?.resetView()}
-					>{ui.resetView}</button
-				>
+				</div>
 			</div>
 
 			<div class="stroke" aria-hidden="true"></div>
 
-			<section class="reading">
+			<section class="reading" class:stale={!!error}>
 				<div class="explain" aria-live="polite">
 					<div class="pane" class:current={pane === 'start'}>
 						<p class="action resting">
@@ -837,6 +886,16 @@
 								: ui.correct}</span
 						>
 						<span class="peeks">{ui.peeks(revealed.size, steps.length)}</span>
+					{/if}
+					<!-- The path to 暗算: watch it, then recall it, then the beads go. -->
+					{#if mode === 'watch'}
+						<button type="button" class="reveal next-stage" onclick={() => setMode('recall')}
+							>{ui.tryFromMemory}</button
+						>
+					{:else if recall && verdict}
+						<button type="button" class="reveal next-stage" onclick={() => setMode('flash')}
+							>{ui.tryFlash}</button
+						>
 					{/if}
 				</p>
 			</section>
@@ -1133,12 +1192,39 @@
 
 	/* ── controls ───────────────────────────────────────── */
 
+	/* Two rows: how to work the problem, then the playback itself. */
 	.controls {
+		display: grid;
+		gap: 0.7rem;
+		padding: 0 0 0.9rem;
+	}
+	.controls-row {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.6rem 1.8rem;
-		padding: 0 0 0.9rem;
+	}
+
+	/* After an error, what is still on the board belongs to the last problem. */
+	.stale {
+		opacity: 0.35;
+		transition: opacity 0.3s ease;
+	}
+	.stale-note {
+		display: block;
+		margin-top: 0.2rem;
+		color: var(--ink-faint);
+	}
+
+	.masthead {
+		display: flex;
+		flex: none;
+		margin: 0;
+		font: inherit;
+	}
+
+	.next-stage {
+		margin-top: 0.9rem;
 	}
 
 	/*
@@ -1223,6 +1309,11 @@
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
+	}
+	.dial-label {
+		font: 400 0.9rem/1 var(--display);
+		letter-spacing: 0.04em;
+		color: var(--ink-faint);
 	}
 	/* A pale wash for the track, a single dab of the brush for the thumb. */
 	.dial input[type='range'] {

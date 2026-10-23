@@ -32,6 +32,18 @@ export interface UiText {
 	why: string;
 	answer: string;
 	resting: string;
+	/** After an error: the board still shows the last problem that worked. */
+	staleNote: (problem: string) => string;
+	speedLabel: string;
+	speedValue: (times: number) => string;
+	decimalsLabel: string;
+	/** The next stage, offered when one is finished. */
+	tryFromMemory: string;
+	tryFlash: string;
+	clearRecord: string;
+	clearConfirm: (level: string) => string;
+	/** A level's recent results, beside it in the practice menu. */
+	recordHint: (correct: number, count: number) => string;
 	/** The two ways of working a problem: watching it, then recalling it (stage ② of 暗算). */
 	modeWatch: string;
 	modeRecall: string;
@@ -150,7 +162,17 @@ export const UI: Record<Locale, UiText> = {
 		soundTitle: 'Bead sounds',
 		why: 'Why',
 		answer: 'Answer',
-		resting: 'The board is clear. Press play, or step through with the arrow keys.',
+		resting:
+			'The board is clear. Press play, or step through with the arrow keys. Once you have watched it, try it from memory.',
+		staleNote: (problem) => `The board still shows ${problem}.`,
+		speedLabel: 'Speed',
+		speedValue: (times) => `${times}×`,
+		decimalsLabel: 'Decimals',
+		tryFromMemory: 'Now try it from memory',
+		tryFlash: 'Now try it by flash',
+		clearRecord: 'Clear record',
+		clearConfirm: (level) => `Clear your record for ${level}?`,
+		recordHint: (correct, count) => `${correct} of last ${count} right`,
 		modeWatch: 'Watch',
 		modeRecall: 'From memory',
 		modeLabel: 'How to work the problem',
@@ -258,7 +280,17 @@ export const UI: Record<Locale, UiText> = {
 		soundTitle: '珠の音',
 		why: 'なぜ',
 		answer: '答え',
-		resting: '盤はまだ空です。再生ボタンを押すか、矢印キーで1手ずつ進めてください。',
+		resting:
+			'盤はまだ空です。再生ボタンを押すか、矢印キーで1手ずつ進めてください。見終わったら、次は思い出して解いてみましょう。',
+		staleNote: (problem) => `盤には前の問題（${problem}）が残っています。`,
+		speedLabel: '速さ',
+		speedValue: (times) => `${times}倍`,
+		decimalsLabel: '小数',
+		tryFromMemory: '次は思い出して解く',
+		tryFlash: '次はフラッシュで',
+		clearRecord: '記録を消す',
+		clearConfirm: (level) => `「${level}」の記録を消しますか？`,
+		recordHint: (correct, count) => `直近${count}問中${correct}問正解`,
 		modeWatch: '見る',
 		modeRecall: '思い出す',
 		modeLabel: '進め方',
