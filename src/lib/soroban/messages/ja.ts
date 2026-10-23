@@ -152,6 +152,14 @@ export const ja: Messages = {
 			`${divisor} × 1 = ${divisor}で、もう${segment}より大きいので、ここには何も入らず、商は0です。このけたは空けたまま、1けた右へ進みます。`,
 		digitWhy: ({ divisor, q, segment }) =>
 			`${divisor} × ${q} = ${q * divisor}は${segment}に収まりますが、${divisor} × ${q + 1} = ${(q + 1) * divisor}は収まりません。だから商は${q}です。立てる前に頭の中で両方を確かめておくので、立てた商を戻す（還元する）ことがありません。`,
+		firstDigitWhy: ({ divisor, lead, fits, q, segment, place, empty }) => {
+			const where = fits
+				? `${divisor}は${lead}に入るので、商の最初の数字は、わられる数の先頭のけたから2けた左の${place}に立てます。`
+				: `${divisor}は${lead}に入らないので、次のけたと合わせて${segment}として考えます。商の最初の数字は2けた左ではなく、わられる数の先頭のけたから1けた左の${place}に立てます。`;
+			const zeros = empty.length === 0 ? '' : `${empty.join('と')}は空けたまま、つまり0です。`;
+			const check = `${divisor} × ${q} = ${q * divisor}は${segment}に収まり、${divisor} × ${q + 1} = ${(q + 1) * divisor}は収まらないので、商は${q}です。`;
+			return where + zeros + check;
+		},
 		zeroText: ({ divisor, segment, quotientPlace }) =>
 			`${segment}に${divisor}は入らないので、商の${quotientPlace}は0です。`,
 		digitText: ({ q, quotientPlace }) => `商の${quotientPlace}に${q}を立てます。`,

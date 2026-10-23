@@ -345,6 +345,22 @@ describe('division reads clearly', () => {
 		}
 	});
 
+	it('says why the first digit goes one rod left or two, and which places are 0', () => {
+		const firstWhy = (problem: string) =>
+			solve(problem).steps.find((st) => st.role === 'quotient')?.why ?? '';
+		// 9 does not go into 1: one rod left, and the ones rod stays empty.
+		expect(firstWhy('1 ÷ 9')).toContain('one rod left');
+		expect(firstWhy('1 ÷ 9')).toContain('ones rod stays empty');
+		// 2 goes into 8: two rods left, onto the ones rod, with nothing skipped.
+		expect(firstWhy('8 ÷ 2')).toContain('two rods left');
+		expect(firstWhy('8 ÷ 2')).not.toContain('empty');
+		// Two places skipped before the first digit of 1 ÷ 76 (0.01…).
+		expect(firstWhy('1 ÷ 76')).toContain('ones and tenths rods stay empty');
+		// Later digits keep the plain check.
+		const second = solve('1 ÷ 9').steps.filter((st) => st.role === 'quotient')[1];
+		expect(second.why).not.toContain('rod left');
+	});
+
 	it('ends an exact division with the quotient alone', () => {
 		const s = solve('4104 ÷ 76');
 		expect(s.continues).toBe(false);

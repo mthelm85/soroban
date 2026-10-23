@@ -97,10 +97,25 @@ export function solveDivide(
 			q === 0
 				? s.zeroText({ divisor: divisorInt, segment, quotientPlace: quotientPlace(p) })
 				: s.digitText({ q, quotientPlace: quotientPlace(p) });
+		// The first digit also says why it sits where it does — one rod left of
+		// the dividend or two — and that any places before it are 0, which on a
+		// soroban means an empty rod (1 ÷ 9: the ones rod stays empty).
+		const empty: string[] = [];
+		for (let r = unitRod; r < p; r++) empty.push(quotientPlace(r));
 		const why =
 			q === 0
 				? s.zeroWhy({ divisor: divisorInt, segment })
-				: s.digitWhy({ divisor: divisorInt, q, segment });
+				: p === firstQuotientRod
+					? s.firstDigitWhy({
+							divisor: divisorInt,
+							lead,
+							fits,
+							q,
+							segment,
+							place: quotientPlace(p),
+							empty
+						})
+					: s.digitWhy({ divisor: divisorInt, q, segment });
 		tape.setPhase(text, 'kakusho');
 		tape.commit(
 			{ rods: [p], technique: 'kakusho', role: 'quotient', formula: String(q), text, why },

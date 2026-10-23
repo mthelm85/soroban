@@ -99,6 +99,19 @@ export interface Messages {
 		settleWhy(p: { segment: number }): string;
 		zeroWhy(p: { divisor: number; segment: number }): string;
 		digitWhy(p: { divisor: number; q: number; segment: number }): string;
+		/**
+		 * The first quotient digit: why it goes two rods left of the dividend's
+		 * leading digit, or only one, and which places before it stay empty (0).
+		 */
+		firstDigitWhy(p: {
+			divisor: number;
+			lead: number;
+			fits: boolean;
+			q: number;
+			segment: number;
+			place: string;
+			empty: string[];
+		}): string;
 		zeroText(p: { divisor: number; segment: number; quotientPlace: string }): string;
 		digitText(p: { q: number; quotientPlace: string }): string;
 		subtract(p: { q: number; digit: number; product: number; kuku: string }): string;

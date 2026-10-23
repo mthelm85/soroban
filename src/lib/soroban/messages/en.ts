@@ -177,6 +177,19 @@ export const en: Messages = {
 			`${divisor} × 1 = ${divisor}, already more than ${segment}, so nothing fits here and the digit is 0. The rod is left empty and the work moves one place right.`,
 		digitWhy: ({ divisor, q, segment }) =>
 			`${divisor} × ${q} = ${q * divisor}, which fits inside ${segment}; ${divisor} × ${q + 1} = ${(q + 1) * divisor}, which does not. So the digit is ${q}. Checking both sides in your head first means the digit is right before it is placed, so there is never anything to take back.`,
+		firstDigitWhy: ({ divisor, lead, fits, q, segment, place, empty }) => {
+			const where = fits
+				? `${divisor} goes into ${lead}, so the first digit of the answer goes two rods left of the dividend's leading digit: the ${place} rod.`
+				: `${divisor} does not go into ${lead}, so ${lead} is read together with the next rod as ${segment}, and the first digit of the answer goes one rod left of the dividend's leading digit, not two: the ${place} rod.`;
+			const zeros =
+				empty.length === 0
+					? ''
+					: empty.length === 1
+						? ` The ${empty[0]} rod stays empty: that place of the answer is 0.`
+						: ` The ${empty.slice(0, -1).join(', ')} and ${empty[empty.length - 1]} rods stay empty: those places of the answer are 0.`;
+			const check = ` ${divisor} × ${q} = ${q * divisor} fits inside ${segment}; ${divisor} × ${q + 1} = ${(q + 1) * divisor} does not, so the digit is ${q}.`;
+			return where + zeros + check;
+		},
 		zeroText: ({ divisor, segment, quotientPlace }) =>
 			`${divisor} does not go into ${segment}, so the quotient's ${quotientPlace} digit is 0.`,
 		digitText: ({ q, quotientPlace }) => `Set ${q} as the quotient's ${quotientPlace} digit.`,
