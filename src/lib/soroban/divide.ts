@@ -50,12 +50,18 @@ export function solveDivide(
 	// Layout: [quotient][dividend L rods][room for decimals]. The divisor is not
 	// on the board at all, so the only room needed on the left is for the
 	// quotient — widened when the divisor has more digits than the dividend.
-	const dividendStart = Math.max(3, d + 3 - L);
+	// …and the answer's unit point must land on the board too: a dividend with
+	// more decimal places than the divisor (0.0001 ÷ 7) moves it to the left.
+	const dividendStart = Math.max(3, d + 3 - L + dividend.dec - divisor.dec);
 	const dividendOnes = dividendStart + L - 1;
 	const quotientOnes = dividendOnes - (d + 1);
-	const needed = Math.max(dividendStart + L, quotientOnes + maxDecimals + d + 2) + 1;
-	const rodCount = chooseRodCount(Math.max(13, needed), m);
 	const unitRod = quotientOnes + (divisor.dec - dividend.dec);
+	// The answer's last place, `maxDecimals` rods right of *its* unit point.
+	// (Counting from the dividend's ones rod instead gave the wrong number of
+	// places whenever the divisor or dividend had decimals of its own.)
+	const lastPlace = unitRod + maxDecimals;
+	const needed = Math.max(dividendStart + L, lastPlace + d + 2) + 1;
+	const rodCount = chooseRodCount(Math.max(13, needed), m);
 
 	// Every rod is named in the answer's place values, counted from the unit
 	// point on the beam — the one reference the learner can see. (Naming the
@@ -76,10 +82,12 @@ export function solveDivide(
 	const firstQuotientRod = fits ? dividendStart - 2 : dividendStart - 1;
 
 	let p = firstQuotientRod;
-	let lastQuotientRod = firstQuotientRod;
+	// A quotient whose first digit lies past the last place asked for (a tiny
+	// dividend, few places) places nothing: to that many places it is 0.
+	let lastQuotientRod = Math.min(firstQuotientRod, lastPlace);
 	let exact = false;
 
-	for (;;) {
+	while (p <= lastPlace) {
 		const segTo = p + d + 1;
 		const segment = readSpan(tape.board, p + 1, segTo);
 		const q = Math.floor(segment / divisorInt);
@@ -124,15 +132,20 @@ export function solveDivide(
 
 		if (q > 0) {
 			// Subtract q × divisor, one divisor digit at a time, highest first.
+			let skippedZeros = 0;
 			for (let j = d - 1; j >= 0; j--) {
 				const digit = divisorDigits[d - 1 - j];
-				if (digit === 0) continue;
+				if (digit === 0) {
+					skippedZeros++;
+					continue;
+				}
 				const k9 = kuku(q, digit);
 				tape.setGroup(
 					s.subtract({ q, digit, product: k9.product, kuku: k9.ja }),
-					s.subtractWhy({ q, digit, i: d - 1 - j })
+					s.subtractWhy({ q, digit, i: d - 1 - j, skipped: skippedZeros })
 				);
 				subValueAt(tape, k9.product, segTo - j, 'product');
+				skippedZeros = 0;
 			}
 		}
 
@@ -141,7 +154,7 @@ export function solveDivide(
 			exact = true;
 			break;
 		}
-		if (p >= quotientOnes + maxDecimals) break;
+		if (p >= lastPlace) break;
 		p += 1;
 	}
 

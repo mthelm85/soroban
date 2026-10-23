@@ -29,6 +29,10 @@ export function solveAddSub(problem: Problem, m: Messages): Solution {
 		n: decInt(t.value) * 10 ** (maxDec - t.value.dec)
 	}));
 
+	// If the whole chain comes out below zero, no order of the terms can help.
+	const total = scaled.reduce((sum, t) => sum + (t.op === '+' ? t.n : -t.n), 0);
+	if (total < 0) throw new SorobanError(m.errors.negativeResult(problem.text));
+
 	let running = 0;
 	const runningTotals: number[] = [];
 	for (const term of scaled) {

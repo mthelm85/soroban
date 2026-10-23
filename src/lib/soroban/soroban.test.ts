@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { solve } from './index';
 import { formatSpan, rodValue } from './board';
+import { messagesFor } from './messages';
 import type { Solution } from './types';
 
 /** Read the headline answer off the final board state. */
@@ -365,5 +366,81 @@ describe('division reads clearly', () => {
 		const s = solve('4104 ÷ 76');
 		expect(s.continues).toBe(false);
 		expect(s.steps[s.steps.length - 1].regions?.map((r) => r.label)).toEqual(['quotient']);
+	});
+});
+
+describe('every step says what its beads do', () => {
+	// The narration is the point of the app, so it is checked against the beads
+	// themselves: the formula against the change on the rod, the words against
+	// the beads that moved, and the rod named against the rod that moved.
+	let seed = 4242;
+	const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+	const int = (lo: number, hi: number) => lo + Math.floor(rand() * (hi - lo + 1));
+	const problems = [
+		'999 + 1',
+		'1000 - 1',
+		'9999 + 1',
+		'10000 - 1',
+		'305 * 12',
+		'4305 / 205',
+		'0.0001 / 7',
+		'1 / 0.03'
+	];
+	for (let i = 0; i < 120; i++) problems.push(`${int(1, 9999)} + ${int(1, 9999)} - ${int(1, 999)}`);
+	for (let i = 0; i < 80; i++) problems.push(`${int(1, 9999)} * ${int(1, 999)}`);
+	for (let i = 0; i < 80; i++) problems.push(`${int(1, 99999)} / ${int(2, 999)}`);
+	for (let i = 0; i < 40; i++) problems.push(`${int(1, 9999) / 100} / ${int(1, 99) / 10}`);
+	const en = messagesFor('en');
+
+	it('matches formula, words and rod name to the beads on every step', () => {
+		for (const p of problems) {
+			const s = solve(p);
+			for (const st of s.steps) {
+				if (st.role === 'quotient' || st.technique === 'set' || st.technique === 'locate') continue;
+				const [r] = st.rods;
+				const b = st.before[r];
+				const a = st.after[r];
+				const where = `${p} step ${st.index + 1}: "${st.text}"`;
+				const signed = (st.formula.replace(/−/g, '-').match(/[+-]\d+/g) ?? []).reduce((x, y) => x + Number(y), 0);
+				expect(signed, where).toBe(rodValue(a) - rodValue(b));
+				const dh = Number(a.heaven) - Number(b.heaven);
+				expect(/Lower the heaven bead/.test(st.text) ? 1 : /Raise the heaven bead/.test(st.text) ? -1 : 0, where).toBe(dh);
+				const up = Number(st.text.match(/push (\d+) earth beads? up/i)?.[1] ?? 0);
+				const down = Number(st.text.match(/(?:pull|take) (\d+) earth beads? (?:back )?down/i)?.[1] ?? 0);
+				expect(up - down, where).toBe(a.earth - b.earth);
+				expect(st.text, where).toContain(`the ${en.place(s.unitRod - r)} rod`);
+			}
+		}
+	});
+
+	it('explains a carry or borrow that ripples past full or empty rods', () => {
+		const carry = solve('999 + 1').steps[1];
+		expect(carry.text).toContain('thousands rod');
+		expect(carry.why).toContain('9 + 1 on the ones rod');
+		expect(carry.why).toContain('tens and hundreds rods already show 9');
+		const borrow = solve('1000 - 1').steps[1];
+		expect(borrow.why).toContain('tens and hundreds rods next to it are empty');
+	});
+
+	it('names the zeros it skips, and answers a multiplication by 0', () => {
+		expect(solve('305 * 12').steps[0].why).toContain('multiplicand’s tens digit is 0');
+		expect(solve('4305 / 205').steps.some((st) => st.groupWhy.includes('0 just before it'))).toBe(true);
+		const zero = solve('0 * 5');
+		expect(zero.answer).toBe('0');
+		expect(zero.steps[0].why).toContain('Anything times 0 is 0');
+	});
+
+	it('gives the decimal places asked for, counted from the answer', () => {
+		expect(solve('1 / 0.03', { maxDecimals: 2 }).answer).toBe('33.33');
+		expect(solve('0.01 / 3', { maxDecimals: 4 }).answer).toBe('0.0033');
+		expect(solve('0.0001 / 7', { maxDecimals: 4 }).answer).toBe('0');
+	});
+
+	it('reads full-width input, and a leading plus', () => {
+		expect(solve('７ ＋ ５').answer).toBe('12');
+		expect(solve('１２．５　×　４').answer).toBe('50');
+		expect(solve('+ 5').answer).toBe('5');
+		expect(() => solve('× 5')).toThrow(/starts with an operator/);
+		expect(() => solve('5 - 7')).toThrow(/comes out below zero/);
 	});
 });

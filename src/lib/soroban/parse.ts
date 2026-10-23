@@ -132,11 +132,14 @@ function isOp(token: Operator | Dec): token is Operator {
 }
 
 export function parseProblem(input: string, m: Messages): Problem {
-	const trimmed = input.trim();
+	// Full-width digits and signs (７＋５, as a Japanese keyboard often types
+	// them) and ideographic spaces become their ordinary forms.
+	const trimmed = input.normalize('NFKC').trim();
 	if (trimmed === '') throw new SorobanError(m.errors.empty);
 
 	let negateFirst = false;
-	let body = trimmed;
+	// A leading plus sign changes nothing: "+5" is 5.
+	let body = trimmed.replace(/^\+\s*/, '');
 	if (body.startsWith('-') || body.startsWith('−')) {
 		negateFirst = true;
 		body = body.slice(1);
@@ -144,7 +147,8 @@ export function parseProblem(input: string, m: Messages): Problem {
 
 	const tokens = tokenize(body, m);
 	if (tokens.length === 0) throw new SorobanError(m.errors.empty);
-	if (tokens.length % 2 === 0) throw new SorobanError(m.errors.endsWithOperator);
+	if (isOp(tokens[0])) throw new SorobanError(m.errors.startsWithOperator);
+	if (isOp(tokens[tokens.length - 1])) throw new SorobanError(m.errors.endsWithOperator);
 	// Tokens must alternate number, operator, number, …
 	for (let i = 0; i < tokens.length; i++) {
 		if (isOp(tokens[i]) !== (i % 2 === 1)) {
@@ -165,9 +169,6 @@ export function parseProblem(input: string, m: Messages): Problem {
 		const [a, b] = numbers;
 		const kind = ops[0] === '*' ? 'multiply' : 'divide';
 		if (kind === 'divide' && decIsZero(b)) throw new SorobanError(m.errors.divideByZero);
-		if (kind === 'multiply' && (decIsZero(a) || decIsZero(b))) {
-			throw new SorobanError(m.errors.multiplyByZero);
-		}
 		return {
 			kind,
 			terms: [],

@@ -65,6 +65,10 @@ export const ja: Messages = {
 			`これが繰り上がりです。${place}の${value} + ${n}は${value + n}で、1つのけたに収まりません。そこで10を左のけたへ移します。左のけたでは、10は一玉1つ分です。`,
 		borrowIn: ({ place, value, n }) =>
 			`これが繰り下がりです。${place}は${value}なので、${n}を引けません。そこで左のけたから10を取ります。左のけたでは、10は一玉1つ分です。`,
+		carryRipple: ({ place, value, n, through, target }) =>
+			`これが繰り上がりです。${place}の${value} + ${n}は${value + n}で、10を左のけたへ送りたいのですが、${through.join('と')}はもう9で、受け取れません。そこで繰り上がりはさらに左へ進み、空きのある${target}に入ります。通り過ぎた9はそれぞれ払うので、全体ではちょうど${n}を足したことになります。`,
+		borrowRipple: ({ place, value, n, through, target }) =>
+			`これが繰り下がりです。${place}は${value === 0 ? '空で' : `${value}しかなく`}、${n}を引けません。となりの${through.join('と')}も空なので、珠のある${target}まで進んで借ります。通り過ぎた空のけたにはそれぞれ9を入れるので、全体ではちょうど${n}を引いたことになります。`,
 		carryWhy: ({ value, n, complement, leftPlace }) =>
 			`1つのけたに置けるのは9までで、${value} + ${n}は${value + n}になります。そこで先に${leftPlace}へ1を繰り上げました。${n}の補数（足して10になる数）は${complement}なので、ここでその${complement}を払います。+10 ${MINUS} ${complement} = +${n} です。`,
 		borrowWhy: ({ value, n, complement, leftPlace }) =>
@@ -107,6 +111,14 @@ export const ja: Messages = {
 		locateGroupWhy:
 			'両落としでは、かけられる数もかける数も頭の中に置いておき、盤には答えだけを積み上げていきます。',
 		locateText: '答えの一の位を定位点に決めます。まだ珠は動かしません。',
+		zeroFactor: '0をかけると答えは0です。珠は1つも動かず、空のけたがそのまま答えの0になります。',
+		skippedZeros: ({ multiplicand, multiplier }) => {
+			const parts = [
+				...(multiplicand.length ? [`かけられる数の${multiplicand.join('と')}`] : []),
+				...(multiplier.length ? [`かける数の${multiplier.join('と')}`] : [])
+			];
+			return `${parts.join('と、')}は0なので、何も足されません。とばして進みます。`;
+		},
 		locateWhy:
 			'部分積はすべてこのけたを基準に置くので、最初に決めておく必要があります。盤にはほかに何も置かないので、頼りになるのはこの基準点と、それぞれの数字の位だけです。',
 		section: ({ digit, multiplier }) => `${digit} × ${multiplier}`,
@@ -165,10 +177,11 @@ export const ja: Messages = {
 		digitText: ({ q, quotientPlace }) => `商の${quotientPlace}に${q}を立てます。`,
 		subtract: ({ q, digit, product, kuku }) =>
 			`${q} × ${digit} = ${product}（${kuku}）を引く`,
-		subtractWhy: ({ q, digit, i }) =>
-			i === 0
+		subtractWhy: ({ q, digit, i, skipped }) =>
+			(i === 0
 				? `${digit}はわる数の最初の数字なので、${q} × ${digit}は商のすぐ右から引きます。答えを2けたとみて、十の位を商の右隣のけたで、一の位をそのさらに右のけたで引きます。`
-				: `${digit}はわる数の${i + 1}番目の数字なので、${q} × ${digit}は最初の積より${i}けた右にずらして引きます。わる数の数字が1つ進むごとに、1けたずつ右へずれます。`,
+				: `${digit}はわる数の${i + 1}番目の数字なので、${q} × ${digit}は最初の積より${i}けた右にずらして引きます。わる数の数字が1つ進むごとに、1けたずつ右へずれます。`) +
+			(skipped === 0 ? '' : 'その前のわる数の0は何も引かないので、とばします。'),
 		regionQuotient: '商',
 		regionDividend: '実',
 		regionRemainder: '余り',
@@ -213,13 +226,15 @@ export const ja: Messages = {
 		tooManyDigits: (max) => `盤が現実的な大きさに収まるよう、数は有効数字${max}けたまでにしています。`,
 		empty: '問題を入力してください（例：4104 ÷ 76）。',
 		endsWithOperator: '式が記号で終わっています。',
+		startsWithOperator: '式が記号で始まっています。数字から始めてください。',
 		doubled: '数または記号が続けて並んでいます。',
 		mulDivTwo:
 			'かけ算とわり算は、2つの数で計算します。2 × 3 × 4 のような続けての計算は、伝統的な練習には含まれません。',
 		negativeStart: 'そろばんでは負の数を表せないので、正の数から始めてください。',
 		divideByZero: '0でわることはできません。',
-		multiplyByZero: '0をかけると盤が空になります。0以外の数で試してください。',
 		negativeRunning: (term) =>
-			`そろばんでは負の数を表せませんが、${term}のところで合計が0より小さくなります。合計が0を下回らないよう、順番を入れ替えてください。`
+			`そろばんでは負の数を表せませんが、${term}のところで合計が0より小さくなります。合計が0を下回らないよう、順番を入れ替えてください。`,
+		negativeResult: (problem) =>
+			`${problem}は答えが0より小さくなります。そろばんは負の数を表せないので、順番を入れかえて試してください。`
 	}
 };

@@ -46,6 +46,21 @@ export function solveMultiply(problem: Problem, m: Messages): Solution {
 	const tape = new Tape(rodCount, unitRod, m);
 	const s = m.multiply;
 
+	// 0 digits add nothing and are skipped below; say so once, up front. And
+	// when a whole factor is 0, nothing moves at all and the answer is 0.
+	const zeroFactor = /^0+$/.test(multiplicand.digits) || /^0+$/.test(multiplier.digits);
+	const zerosAt = (digits: number[]) =>
+		digits.flatMap((digit, i) => (digit === 0 ? [m.place(digits.length - 1 - i)] : []));
+	const skipped = {
+		multiplicand: zerosAt(multiplicandDigits),
+		multiplier: zerosAt(multiplierDigits)
+	};
+	const locateWhy = zeroFactor
+		? s.zeroFactor
+		: skipped.multiplicand.length || skipped.multiplier.length
+			? `${s.locateWhy}${s.skippedZeros(skipped)}`
+			: s.locateWhy;
+
 	// 定位 — in 両落とし the only thing to set up is where the answer will sit.
 	tape.setSection(s.setup);
 	tape.setGroup(s.locateGroup, s.locateGroupWhy);
@@ -57,7 +72,7 @@ export function solveMultiply(problem: Problem, m: Messages): Solution {
 			role: 'set',
 			formula: `${decToString(multiplicand)} × ${decToString(multiplier)}`,
 			text: s.locateText,
-			why: s.locateWhy
+			why: locateWhy
 		},
 		() => {}
 	);

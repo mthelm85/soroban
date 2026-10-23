@@ -39,6 +39,11 @@ function rods(n: number): string {
 
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
 
+/** "tens", "tens and hundreds", "tens, hundreds and thousands". */
+function andList(items: string[]): string {
+	return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 function digits(n: number): string {
 	return n === 1 ? '1 digit' : `${n} digits`;
 }
@@ -55,7 +60,7 @@ export const en: Messages = {
 				: `Lower the heaven bead (+5) on the ${place} rod.`,
 		addFiveWhy: ({ n, extra }) =>
 			extra
-				? `${n} is 5 + ${extra}. The heaven bead is worth exactly 5 and is still free, so it carries the 5 and ${earth(extra)} carry the rest.`
+				? `${n} is 5 + ${extra}. The heaven bead is worth exactly 5 and is still free, so it carries the 5 and ${earth(extra)} ${extra === 1 ? 'carries' : 'carry'} the rest.`
 				: 'The heaven bead is worth exactly 5 and is still free, so 5 goes on in one motion.',
 		addEarth: ({ place, n }) => `Push ${earth(n)} up on the ${place} rod.`,
 		addEarthWhy: ({ n, free }) =>
@@ -63,7 +68,7 @@ export const en: Messages = {
 		fiveComposition: ({ place, give }) =>
 			`Lower the heaven bead (+5) and take ${earth(give)} back down on the ${place} rod.`,
 		fiveCompositionWhy: ({ n, free, give }) =>
-			`Adding ${n} needs ${earth(n)} but ${free === 0 ? 'none are' : `only ${free} ${be(free)}`} free, so the five bead stands in for them. It puts on 5, which overshoots by ${give}, and those ${give} come straight back off: +5 ${MINUS} ${give} = +${n}.`,
+			`Adding ${n} needs ${earth(n)} but ${free === 0 ? 'none are' : `only ${free} ${be(free)}`} free, so the five bead stands in for them. It puts on 5, which overshoots by ${give}, and ${give === 1 ? 'that 1 comes' : `those ${give} come`} straight back off: +5 ${MINUS} ${give} = +${n}.`,
 
 		subFive: ({ place, extra }) =>
 			extra
@@ -71,7 +76,7 @@ export const en: Messages = {
 				: `Raise the heaven bead (${MINUS}5) on the ${place} rod.`,
 		subFiveWhy: ({ n, extra }) =>
 			extra
-				? `${n} is 5 + ${extra}. The heaven bead gives back its 5 and ${earth(extra)} give back the rest.`
+				? `${n} is 5 + ${extra}. The heaven bead gives back its 5 and ${earth(extra)} ${extra === 1 ? 'gives' : 'give'} back the rest.`
 				: 'The heaven bead is worth exactly 5 and is set, so raising it takes the whole 5 off in one motion.',
 		subEarth: ({ place, n }) => `Pull ${earth(n)} down on the ${place} rod.`,
 		subEarthWhy: ({ n, ones }) =>
@@ -79,12 +84,16 @@ export const en: Messages = {
 		fiveDecomposition: ({ place, give }) =>
 			`Raise the heaven bead (${MINUS}5) and push ${earth(give)} up on the ${place} rod.`,
 		fiveDecompositionWhy: ({ n, ones, give }) =>
-			`Taking ${n} off needs ${earth(n)} but ${ones === 0 ? 'none are' : `only ${ones} ${be(ones)}`} set, so the five bead has to be used. Raising it removes 5, which is ${give} too many, and those ${give} go back on: ${MINUS}5 + ${give} = ${MINUS}${n}.`,
+			`Taking ${n} off needs ${earth(n)} but ${ones === 0 ? 'none are' : `only ${ones} ${be(ones)}`} set, so the five bead has to be used. Raising it removes 5, which is ${give} too many, and ${give === 1 ? 'that 1 goes' : `those ${give} go`} back on: ${MINUS}5 + ${give} = ${MINUS}${n}.`,
 
 		carryIn: ({ place, value, n }) =>
 			`This is the carry. ${value} + ${n} on the ${place} rod makes ${value + n}, more than one rod can show, so its ten moves one rod left — where it is worth just one bead.`,
 		borrowIn: ({ place, value, n }) =>
 			`This is the borrow. The ${place} rod ${value === 0 ? 'is empty' : `shows only ${value}`}, too little to take ${n} from, so a ten is taken from the rod on its left — where a ten is just one bead.`,
+		carryRipple: ({ place, value, n, through, target }) =>
+			`This is the carry. ${value} + ${n} on the ${place} rod makes ${value + n}, so a ten has to move one rod left — but the ${andList(through)} ${through.length === 1 ? 'rod already shows' : 'rods already show'} 9 and cannot take it. So the carry ripples along to the ${target} rod, the first with room. Each 9 it passes then comes off, so the whole move still adds just ${n}.`,
+		borrowRipple: ({ place, value, n, through, target }) =>
+			`This is the borrow. The ${place} rod ${value === 0 ? 'is empty' : `shows only ${value}`}, too little to take ${n} from, and the ${andList(through)} ${through.length === 1 ? 'rod next to it is' : 'rods next to it are'} empty too. So the borrow reaches along to the ${target} rod, the first with a bead to give. Each empty rod it passes then gets 9, so the whole move still takes off just ${n}.`,
 		carryWhy: ({ value, n, complement, leftPlace }) =>
 			`A rod can only show 9, and ${value} + ${n} is ${value + n}, so the ten has just gone onto the ${leftPlace} rod. ${n} is ${complement} short of 10, so that ${complement} now comes off here: +10 ${MINUS} ${complement} = +${n}.`,
 		borrowWhy: ({ value, n, complement, leftPlace }) =>
@@ -128,6 +137,17 @@ export const en: Messages = {
 		locateGroupWhy:
 			'Both are held in mind, and the rods carry nothing but the answer as it accumulates.',
 		locateText: "Fix the answer's ones digit on a unit point. No beads move yet.",
+		zeroFactor:
+			'Anything times 0 is 0, so no bead ever moves: the answer is the empty rods, 0.',
+		skippedZeros: ({ multiplicand, multiplier }) => {
+			const parts = [
+				...(multiplicand.length ? [`the multiplicand’s ${andList(multiplicand)} ${multiplicand.length === 1 ? 'digit' : 'digits'}`] : []),
+				...(multiplier.length ? [`the multiplier’s ${andList(multiplier)} ${multiplier.length === 1 ? 'digit' : 'digits'}`] : [])
+			];
+			const count = multiplicand.length + multiplier.length;
+			const said = parts.join(' and ');
+			return ` ${said.charAt(0).toUpperCase()}${said.slice(1)} ${count === 1 ? 'is' : 'are'} 0: ${count === 1 ? 'it adds' : 'they add'} nothing, so ${count === 1 ? 'it is' : 'they are'} skipped.`;
+		},
 		locateWhy:
 			'Every partial product is positioned relative to this one rod, so it has to be settled before anything else. With nothing else on the board there is no layout to read off — just this reference point and the place of each digit.',
 		section: ({ digit, multiplier }) => `${digit} × ${multiplier}`,
@@ -195,10 +215,15 @@ export const en: Messages = {
 		digitText: ({ q, quotientPlace }) => `Set ${q} as the quotient's ${quotientPlace} digit.`,
 		subtract: ({ q, digit, product }) =>
 			`${q} × ${digit} = ${product}, subtracted`,
-		subtractWhy: ({ q, digit, i }) =>
-			i === 0
+		subtractWhy: ({ q, digit, i, skipped }) =>
+			(i === 0
 				? `${digit} is the divisor's first digit, so ${q} × ${digit} is taken off starting right next to the quotient digit: counted as two digits, its tens on the rod just right of the quotient and its ones on the rod after that.`
-				: `${digit} is the divisor's ${ORDINALS[i] ?? `${i + 1}th`} digit, so ${q} × ${digit} is taken off ${rods(i)} further right than the first product. Each step along the divisor shifts the product one rod right.`,
+				: `${digit} is the divisor's ${ORDINALS[i] ?? `${i + 1}th`} digit, so ${q} × ${digit} is taken off ${rods(i)} further right than the first product. Each step along the divisor shifts the product one rod right.`) +
+			(skipped === 0
+				? ''
+				: skipped === 1
+					? ' The divisor’s 0 just before it takes nothing off, so it is skipped.'
+					: ` The divisor’s ${skipped} zeros just before it take nothing off, so they are skipped.`),
 		regionQuotient: 'quotient',
 		regionDividend: 'dividend',
 		regionRemainder: 'remainder',
@@ -243,13 +268,15 @@ export const en: Messages = {
 			`Numbers are limited to ${max} significant digits so the board stays a realistic size.`,
 		empty: 'Type a problem, for example 4104 ÷ 76.',
 		endsWithOperator: 'The problem ends with an operator.',
+		startsWithOperator: 'The problem starts with an operator; begin with a number.',
 		doubled: 'Two numbers or two operators in a row.',
 		mulDivTwo:
 			'Multiplication and division take exactly two numbers. Chains like 2 × 3 × 4 are not part of the traditional drill.',
 		negativeStart: 'A soroban cannot show a negative number, so start with a positive one.',
 		divideByZero: 'Cannot divide by zero.',
-		multiplyByZero: 'Multiplying by zero clears the board — try non-zero numbers.',
 		negativeRunning: (term) =>
-			`A soroban cannot show a negative number, and the running total goes below zero at ${term}. Reorder the terms so the total never drops below zero.`
+			`A soroban cannot show a negative number, and the running total goes below zero at ${term}. Reorder the terms so the total never drops below zero.`,
+		negativeResult: (problem) =>
+			`${problem} comes out below zero, and a soroban cannot show a negative number. Try it the other way round.`
 	}
 };

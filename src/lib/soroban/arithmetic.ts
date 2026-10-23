@@ -145,13 +145,26 @@ function requireRod(tape: Tape, rod: number, message: string): void {
 	if (rod < 0 || rod >= tape.rodCount) throw new SorobanError(message);
 }
 
+/**
+ * Where a carry or borrow started, while it ripples left past rods that cannot
+ * take it (9s for a carry, 0s for a borrow), so the bead that finally lands can
+ * explain the whole chain rather than only its last link.
+ */
+interface Ripple {
+	place: string;
+	value: number;
+	n: number;
+	through: string[];
+}
+
 /** Add a single digit n (0..9) to one rod, recursing for carries. */
 export function addDigit(
 	tape: Tape,
 	rod: number,
 	n: number,
 	role: StepRole = 'main',
-	context?: string
+	context?: string,
+	ripple?: Ripple
 ): void {
 	if (n === 0) return;
 	requireRod(tape, rod, tape.m.errors.needRodsLeft);
@@ -175,7 +188,15 @@ export function addDigit(
 	const phase = tape.m.bead.phaseAdd({ place, value, n });
 
 	tape.setPhase(phase, composite);
-	addDigit(tape, rod - 1, 1, 'carry', tape.m.bead.carryIn({ place, value, n }));
+	// The next rod is a 9 too: the carry passes over it. Keep the story of
+	// where it began, and tell it once, on the rod where it finally lands.
+	const origin: Ripple = ripple ?? { place, value, n, through: [] };
+	const chain: Ripple = ripple ? { ...origin, through: [...origin.through, place] } : origin;
+	const passesOn = rod - 1 >= 0 && rodValue(tape.board[rod - 1]) === 9;
+	const landing = chain.through.length
+		? tape.m.bead.carryRipple({ ...chain, target: tape.place(rod - 1) })
+		: tape.m.bead.carryIn({ place, value, n });
+	addDigit(tape, rod - 1, 1, 'carry', passesOn ? undefined : landing, passesOn ? chain : undefined);
 
 	tape.setPhase(phase, composite);
 	run(
@@ -193,7 +214,8 @@ export function subDigit(
 	rod: number,
 	n: number,
 	role: StepRole = 'main',
-	context?: string
+	context?: string,
+	ripple?: Ripple
 ): void {
 	if (n === 0) return;
 	requireRod(tape, rod, tape.m.errors.needRodsLeft);
@@ -217,7 +239,14 @@ export function subDigit(
 	const phase = tape.m.bead.phaseSub({ place, value, n });
 
 	tape.setPhase(phase, composite);
-	subDigit(tape, rod - 1, 1, 'borrow', tape.m.bead.borrowIn({ place, value, n }));
+	// The next rod is empty too: the borrow reaches past it to the first bead.
+	const origin: Ripple = ripple ?? { place, value, n, through: [] };
+	const chain: Ripple = ripple ? { ...origin, through: [...origin.through, place] } : origin;
+	const passesOn = rod - 1 >= 0 && rodValue(tape.board[rod - 1]) === 0;
+	const landing = chain.through.length
+		? tape.m.bead.borrowRipple({ ...chain, target: tape.place(rod - 1) })
+		: tape.m.bead.borrowIn({ place, value, n });
+	subDigit(tape, rod - 1, 1, 'borrow', passesOn ? undefined : landing, passesOn ? chain : undefined);
 
 	tape.setPhase(phase, composite);
 	run(

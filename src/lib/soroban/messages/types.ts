@@ -48,6 +48,13 @@ export interface Messages {
 		carryIn(p: Placed & { value: number; n: number }): string;
 		/** The borrowed one itself: why a bead is coming off the next rod. */
 		borrowIn(p: Placed & { value: number; n: number }): string;
+		/**
+		 * A carry that cannot stop on the next rod because it already shows 9:
+		 * it ripples left past `through` until `target`, the first rod with room.
+		 */
+		carryRipple(p: Placed & { value: number; n: number; through: string[]; target: string }): string;
+		/** A borrow that has to reach past empty rods (`through`) to `target`. */
+		borrowRipple(p: Placed & { value: number; n: number; through: string[]; target: string }): string;
 		carryWhy(p: { value: number; n: number; complement: number; leftPlace: string }): string;
 		borrowWhy(p: { value: number; n: number; complement: number; leftPlace: string }): string;
 
@@ -72,6 +79,10 @@ export interface Messages {
 		locateGroupWhy: string;
 		locateText: string;
 		locateWhy: string;
+		/** Said instead of locateWhy when a factor is 0: nothing will ever move. */
+		zeroFactor: string;
+		/** The factors' 0 digits, by place, which add nothing and are skipped. */
+		skippedZeros(p: { multiplicand: string[]; multiplier: string[] }): string;
 		section(p: { digit: number; multiplier: string }): string;
 		product(p: { a: number; b: number; product: number; kuku: string }): string;
 		productWhy(p: {
@@ -116,7 +127,8 @@ export interface Messages {
 		digitText(p: { q: number; quotientPlace: string }): string;
 		subtract(p: { q: number; digit: number; product: number; kuku: string }): string;
 		/** `i` counts the divisor's digits from the left, starting at 0. */
-		subtractWhy(p: { q: number; digit: number; i: number }): string;
+		/** `skipped`: how many of the divisor's 0 digits came just before this one. */
+		subtractWhy(p: { q: number; digit: number; i: number; skipped: number }): string;
 		regionQuotient: string;
 		regionDividend: string;
 		/** What is left of the dividend when the division stops. */
@@ -140,11 +152,13 @@ export interface Messages {
 		tooManyDigits(max: number): string;
 		empty: string;
 		endsWithOperator: string;
+		startsWithOperator: string;
 		doubled: string;
 		mulDivTwo: string;
 		negativeStart: string;
 		divideByZero: string;
-		multiplyByZero: string;
 		negativeRunning(term: string): string;
+		/** The whole chain comes out below zero, so no order of terms can help. */
+		negativeResult(problem: string): string;
 	};
 }
