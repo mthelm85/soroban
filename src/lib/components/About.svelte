@@ -24,7 +24,8 @@
 	.about {
 		position: relative;
 		max-width: 46rem;
-		margin-top: 7rem;
+		/* Centred on the page as a block; the lines inside stay ragged-right for reading. */
+		margin: 7rem auto 0;
 		padding-top: 3rem;
 	}
 	/* The same dry-brush stroke as above the reading, at half strength: a pause, not a wall. */
@@ -41,6 +42,7 @@
 
 	h2 {
 		margin: 0 0 1.1rem;
+		text-align: center;
 		font: 400 1.3rem/1.3 var(--display);
 		letter-spacing: 0.04em;
 		color: var(--ink);
