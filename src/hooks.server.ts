@@ -5,7 +5,8 @@ import type { Handle } from '@sveltejs/kit/hooks';
  * browser uses it to choose Japanese rather than Chinese glyph forms for kanji.
  */
 export const handle: Handle = ({ event, resolve }) => {
-	const lang = event.url.pathname === '/ja' || event.url.pathname.startsWith('/ja/') ? 'ja' : 'en';
+	// By route, not by path: on GitHub Pages every path starts with /soroban.
+	const lang = event.route.id?.startsWith('/ja') ? 'ja' : 'en';
 	return resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%lang%', lang)
 	});

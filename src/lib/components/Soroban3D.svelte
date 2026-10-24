@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { asset } from '$app/paths';
 	import { BeadSound } from '#lib/audio/beadSound.js';
 	import { SorobanScene } from '#lib/three/SorobanScene.js';
 	import type { Board, Region } from '#lib/soroban/index.js';
@@ -115,7 +116,7 @@
 	{#if veiled && ready && veilLabel}
 		<!-- The board is in the mind now: an empty circle where it stood. -->
 		<div class="veil">
-			<img src="/enso.svg" alt="" />
+			<img src={asset('enso.svg')} alt="" />
 			<span>{veilLabel}</span>
 		</div>
 	{/if}
@@ -126,7 +127,7 @@
 		<!-- (Not while a drill stands in for the board: it is never shown then.) -->
 		<!-- An ensō, brushed again and again while the board is prepared. -->
 		<div class="loading" role="status" aria-live="polite">
-			<img class="enso" src="/enso.svg" alt="" />
+			<img class="enso" src={asset('enso.svg')} alt="" />
 			<span>{loadingLabel}</span>
 		</div>
 	{/if}

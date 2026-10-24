@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { page } from '$app/state';
+	import { asset, resolve } from '$app/paths';
 	import Soroban3D from '#lib/components/Soroban3D.svelte';
 	import StepList from '#lib/components/StepList.svelte';
 	import InkMenu from '#lib/components/InkMenu.svelte';
@@ -56,8 +56,10 @@
 		}
 	}
 
-	// A problem can arrive in the URL, which is how the language switch keeps it.
-	const startingProblem = page.url.searchParams.get('q')?.trim() || DEFAULT_PROBLEM;
+	// A problem can also arrive in the URL (?q=…), which is how the language
+	// switch keeps it. The page is prerendered without one, so it is read once
+	// the page is running in the browser; see onMount.
+	const startingProblem = DEFAULT_PROBLEM;
 	// Each language route mounts its own App, so the locale is fixed for its lifetime.
 	const first = attempt(startingProblem, DEFAULT_DECIMALS, untrack(() => locale));
 
@@ -325,7 +327,9 @@
 		index < 0 ? 'start' : recall && !shown ? 'prompt' : index
 	);
 
-	const switchHref = $derived(`${ui.switchPath}?q=${encodeURIComponent(input)}`);
+	const switchHref = $derived(
+		`${locale === 'en' ? resolve('/ja') : resolve('/')}?q=${encodeURIComponent(input)}`
+	);
 
 	function run(text = input) {
 		const result = attempt(text, maxDecimals, locale);
@@ -417,6 +421,11 @@
 	}
 
 	onMount(() => {
+		const asked = new URLSearchParams(location.search).get('q')?.trim();
+		if (asked && asked !== input) {
+			input = asked;
+			run(asked);
+		}
 		try {
 			panelOpen = localStorage.getItem(PANEL_KEY) === 'open';
 			soundOn = localStorage.getItem(SOUND_KEY) !== 'off';
@@ -487,7 +496,7 @@
 	<div class="main">
 		<header>
 			<h1 class="masthead">
-				<a class="brand" href={locale === 'en' ? '/' : '/ja'} lang="ja" aria-label="算盤">
+				<a class="brand" href={locale === 'en' ? resolve('/') : resolve('/ja')} lang="ja" aria-label="算盤">
 					<span class="logo">算盤</span>
 					<span class="seal" aria-hidden="true">珠</span>
 				</a>
@@ -676,7 +685,7 @@
 						onclick={() => {
 							playing = false;
 							index = -1;
-						}}><span class="mark" style:--mark="url(/ink/icon-start.svg)"></span></button
+						}}><span class="mark" style:--mark={`url(${asset('ink/icon-start.svg')})`}></span></button
 					>
 					<button
 						type="button"
@@ -685,7 +694,7 @@
 						onclick={() => {
 							playing = false;
 							go(index - 1);
-						}}><span class="mark" style:--mark="url(/ink/icon-back.svg)"></span></button
+						}}><span class="mark" style:--mark={`url(${asset('ink/icon-back.svg')})`}></span></button
 					>
 					<button
 						type="button"
@@ -695,7 +704,7 @@
 						onclick={toggle}
 						><span
 							class="mark"
-							style:--mark={playing ? 'url(/ink/icon-pause.svg)' : 'url(/ink/icon-play.svg)'}
+							style:--mark={playing ? `url(${asset('ink/icon-pause.svg')})` : `url(${asset('ink/icon-play.svg')})`}
 						></span></button
 					>
 					<button
@@ -705,7 +714,7 @@
 						onclick={() => {
 							playing = false;
 							go(index + 1);
-						}}><span class="mark" style:--mark="url(/ink/icon-next.svg)"></span></button
+						}}><span class="mark" style:--mark={`url(${asset('ink/icon-next.svg')})`}></span></button
 					>
 					<button
 						type="button"
@@ -714,7 +723,7 @@
 						onclick={() => {
 							playing = false;
 							index = steps.length - 1;
-						}}><span class="mark" style:--mark="url(/ink/icon-end.svg)"></span></button
+						}}><span class="mark" style:--mark={`url(${asset('ink/icon-end.svg')})`}></span></button
 					>
 				</div>
 
@@ -898,7 +907,7 @@
 				>
 			</div>
 			<button type="button" class="close" aria-label={ui.panelClose} onclick={() => setPanel(false)}
-				><span class="mark" style:--mark="url(/ink/icon-close.svg)"></span></button
+				><span class="mark" style:--mark={`url(${asset('ink/icon-close.svg')})`}></span></button
 			>
 		</div>
 

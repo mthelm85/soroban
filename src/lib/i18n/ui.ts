@@ -89,7 +89,6 @@ export interface UiText {
 	failed: string;
 	/** Link to the other language version. */
 	switchLabel: string;
-	switchPath: string;
 }
 
 export const UI: Record<Locale, UiText> = {
@@ -178,8 +177,7 @@ export const UI: Record<Locale, UiText> = {
 		recordFlash: (correct, count) => `${correct} of the last ${count} right by flash`,
 		practiceStartDrill: 'Every answer here is counted.',
 		failed: 'Something went wrong working that out.',
-		switchLabel: '日本語',
-		switchPath: '/ja'
+		switchLabel: '日本語'
 	},
 	ja: {
 		lang: 'ja',
@@ -266,7 +264,6 @@ export const UI: Record<Locale, UiText> = {
 		recordFlash: (correct, count) => `フラッシュで直近${count}問のうち${correct}問正解`,
 		practiceStartDrill: 'ここでの答えはすべて記録されます。',
 		failed: '計算中にエラーが起きました。',
-		switchLabel: 'English',
-		switchPath: '/'
+		switchLabel: 'English'
 	}
 };

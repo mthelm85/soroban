@@ -31,6 +31,7 @@ import {
 	type Material,
 	type Texture
 } from 'three/webgpu';
+import { asset } from '$app/paths';
 import {
 	builtinAOContext,
 	mrt,
@@ -177,7 +178,7 @@ function zenRoom(): Scene {
  * Poly Haven (CC0) — an empty interior lit softly through a window, warm at
  * 4200 K. Used only for lighting; it is never drawn.
  */
-const ENVIRONMENT_URL = '/env/lebombo_1k.hdr';
+const ENVIRONMENT_URL = asset('env/lebombo_1k.hdr');
 const ENVIRONMENT_INTENSITY = 0.55;
 /** Longest the board waits for the photographed lighting before showing anyway. */
 const ENVIRONMENT_TIMEOUT = 8000;
