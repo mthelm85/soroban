@@ -13,7 +13,7 @@
 		nextLevel,
 		type LevelId
 	} from '#lib/soroban/practice.js';
-	import { EXAMPLES, UI } from '#lib/i18n/ui.js';
+	import { UI } from '#lib/i18n/ui.js';
 	import {
 		decToString,
 		formatSpan,
@@ -80,11 +80,11 @@
 	 * and after it, so each one can be checked exactly, not just the answer.
 	 */
 	/*
-	 * Stage ③: flash and read aloud. The beads are gone entirely; the problem
-	 * is flashed where the board stood, or spoken, and worked on the soroban in
-	 * the mind alone — a chain number by number, a × or ÷ whole.
+	 * Stage ③: flash. The beads are gone entirely; the problem is flashed where
+	 * the board stood and worked on the soroban in the mind alone — a chain
+	 * number by number, a × or ÷ whole.
 	 */
-	type Mode = 'watch' | 'recall' | 'flash' | 'read';
+	type Mode = 'watch' | 'recall' | 'flash';
 	let mode = $state<Mode>('watch');
 	/** Steps the learner has revealed while recalling. */
 	const revealed = new SvelteSet<number>();
@@ -97,7 +97,7 @@
 	 * soroban/practice.ts). Answers given from memory are kept per level in
 	 * this browser, and five in a row suggests moving up.
 	 */
-	type Recorded = 'recall' | 'flash' | 'read';
+	type Recorded = 'recall' | 'flash';
 	interface Result {
 		correct: boolean;
 		revealed: number;
@@ -132,7 +132,7 @@
 	const step = $derived(index >= 0 ? (steps[index] ?? null) : null);
 	const atEnd = $derived(index >= steps.length - 1);
 	const recall = $derived(mode === 'recall');
-	const drill = $derived(mode === 'flash' || mode === 'read');
+	const drill = $derived(mode === 'flash');
 	/**
 	 * Whether the current step is in view: always when watching, once revealed
 	 * when recalling, and never in a drill, where there is no board at all.
@@ -229,11 +229,7 @@
 		answerLabel: ui.answer,
 		recallAnswer: ui.recallAnswer,
 		watchIt: ui.watchIt,
-		nextProblem: ui.nextProblem,
-		listening: ui.listening,
-		noSpeech: ui.noSpeech,
-		noVoice: ui.noVoice,
-		speech: ui.speech
+		nextProblem: ui.nextProblem
 	});
 
 	/** Keep a practice result, under the way it was reached. */
@@ -518,18 +514,6 @@
 					<button type="submit" class="solve">{ui.solve}</button>
 				</div>
 				<InkMenu
-					label={ui.examples}
-					items={EXAMPLES.map((example, i) => ({
-						value: example,
-						title: example,
-						hint: ui.exampleHints[i]
-					}))}
-					onpick={(picked) => {
-						input = picked;
-						solveOwn(picked);
-					}}
-				/>
-				<InkMenu
 					label={ui.practice}
 					items={LEVELS.map((level) => ({
 						value: level.id,
@@ -537,7 +521,6 @@
 						hint: [ui.levels[level.id].hint, recordHint(level.id)].filter(Boolean).join(' · ')
 					}))}
 					onpick={(level) => practise(level as LevelId)}
-					align="end"
 				/>
 			</form>
 
@@ -574,9 +557,7 @@
 						{@const right = recent.filter((r) => r.correct).length}
 						{recordedAs === 'flash'
 							? ui.recordFlash(right, recent.length)
-							: recordedAs === 'read'
-								? ui.recordRead(right, recent.length)
-								: ui.practiceRecord(right, recent.length)}
+							: ui.practiceRecord(right, recent.length)}
 					{:else}
 						{drill ? ui.practiceStartDrill : ui.practiceStart}
 					{/if}
@@ -631,15 +612,13 @@
 				/>
 				{#if drill && drillProblem}
 					<Drill
-						kind={mode === 'read' ? 'read' : 'flash'}
 						problem={drillProblem}
 						answer={finalAnswer}
 						continues={solution.continues ?? false}
 						pace={speed}
-						voiceLang={ui.voiceLang}
 						text={drillText}
 						same={(given) => matchesAnswer(given)}
-						onresult={(correct) => record(correct, 0, mode === 'read' ? 'read' : 'flash')}
+						onresult={(correct) => record(correct, 0, 'flash')}
 						onwatch={() => setMode('watch')}
 						onnext={practiceLevel ? deal : null}
 					/>
@@ -669,13 +648,6 @@
 						aria-checked={mode === 'flash'}
 						class:active={mode === 'flash'}
 						onclick={() => setMode('flash')}>{ui.modeFlash}</button
-					>
-					<button
-						type="button"
-						role="radio"
-						aria-checked={mode === 'read'}
-						class:active={mode === 'read'}
-						onclick={() => setMode('read')}>{ui.modeRead}</button
 					>
 				</div>
 
@@ -796,11 +768,7 @@
 								? whole
 									? ui.flashIntroWhole
 									: ui.flashIntro
-								: mode === 'read'
-									? whole
-										? ui.readIntroWhole
-										: ui.readIntro
-									: recall
+								: recall
 										? ui.recallReady(solution.problem)
 										: ui.resting}
 						</p>

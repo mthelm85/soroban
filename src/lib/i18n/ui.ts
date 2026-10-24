@@ -9,9 +9,6 @@ export interface UiText {
 	problemLabel: string;
 	/** The button beside the problem that sets it on the board. */
 	solve: string;
-	examples: string;
-	/** Hint shown beside each example, in the order of EXAMPLES. */
-	exampleHints: string[];
 	panelOpen: string;
 	panelClose: string;
 	tabSteps: string;
@@ -73,20 +70,14 @@ export interface UiText {
 	/** Five in a row from memory, with the next level's name. */
 	readyToMoveUp: (next: string) => string;
 	moveUp: string;
-	/** Stage ③: the chain flashed or read aloud, the beads gone entirely. */
+	/** Stage ③: the problem flashed where the board stood, the beads gone entirely. */
 	modeFlash: string;
-	modeRead: string;
 	flashIntro: string;
-	readIntro: string;
 	/** The same, for a whole multiplication or division. */
 	flashIntroWhole: string;
-	readIntroWhole: string;
 	begin: string;
 	again: string;
 	watchIt: string;
-	listening: string;
-	noSpeech: string;
-	noVoice: string;
 	/** The pace setting, shown as seconds per number while flashing. */
 	perNumber: (seconds: number) => string;
 	/** …or, for a whole problem, how long it stays. */
@@ -94,37 +85,12 @@ export interface UiText {
 	/** How many numbers in a practice chain (口数). */
 	numbersLabel: string;
 	recordFlash: (correct: number, count: number) => string;
-	recordRead: (correct: number, count: number) => string;
 	practiceStartDrill: string;
-	/** Language of the reading voice. */
-	voiceLang: string;
-	/** How a problem is read aloud: in Japanese, as soroban schools read it. */
-	speech: {
-		open: string;
-		first: (n: string) => string;
-		add: (n: string, afterSubtract: boolean) => string;
-		subtract: (n: string) => string;
-		close: string;
-		ready: string;
-		times: (a: string, b: string) => string;
-		divide: (a: string, b: string) => string;
-	};
 	failed: string;
 	/** Link to the other language version. */
 	switchLabel: string;
 	switchPath: string;
 }
-
-/** The built-in examples, the same in both languages. */
-export const EXAMPLES = [
-	'7 + 5',
-	'11 − 6',
-	'123 + 456 − 78',
-	'23 × 45',
-	'12 × 345',
-	'4104 ÷ 76',
-	'1 ÷ 9'
-];
 
 export const UI: Record<Locale, UiText> = {
 	en: {
@@ -134,16 +100,6 @@ export const UI: Record<Locale, UiText> = {
 			'A 3D Japanese soroban that works arithmetic out bead by bead, explaining why each move is the one the method calls for.',
 		problemLabel: 'Problem',
 		solve: 'Solve',
-		examples: 'Examples',
-		exampleHints: [
-			'a carry',
-			'a borrow',
-			'a chain',
-			'two by two',
-			'two by three',
-			'exact',
-			'recurring'
-		],
 		panelOpen: 'Steps & method',
 		panelClose: 'Close',
 		tabSteps: 'Steps',
@@ -209,38 +165,18 @@ export const UI: Record<Locale, UiText> = {
 		readyToMoveUp: (next) => `Five in a row from memory. Ready for ${next}.`,
 		moveUp: 'Move up',
 		modeFlash: 'Flash',
-		modeRead: 'Read aloud',
 		flashIntro:
 			'The numbers will flash one at a time where the board was. Keep the total on the soroban in your mind, then give the answer.',
-		readIntro:
-			'Close your eyes and listen. Keep the total on the soroban in your mind, then give the answer.',
 		flashIntroWhole:
 			'The problem will appear once where the board was, then vanish. Work it on the soroban in your mind, then give the answer.',
-		readIntroWhole:
-			'Close your eyes and listen. Work the problem on the soroban in your mind, then give the answer.',
 		begin: 'Begin',
 		again: 'Again',
 		watchIt: 'Watch it worked',
-		listening: 'Listening',
-		noSpeech: 'This browser cannot read aloud.',
-		noVoice: 'No English voice was found on this device, so the reading may sound wrong.',
 		perNumber: (seconds) => `${seconds} s each`,
 		perProblem: (seconds) => `shown ${seconds} s`,
 		numbersLabel: 'Numbers',
 		recordFlash: (correct, count) => `${correct} of the last ${count} right by flash`,
-		recordRead: (correct, count) => `${correct} of the last ${count} right by ear`,
 		practiceStartDrill: 'Every answer here is counted.',
-		voiceLang: 'en-US',
-		speech: {
-			open: 'Ready.',
-			first: (n) => `${n}.`,
-			add: (n) => `plus ${n}.`,
-			subtract: (n) => `minus ${n}.`,
-			close: "That's all.",
-			ready: 'Ready.',
-			times: (a, b) => `${a} times ${b}.`,
-			divide: (a, b) => `${a} divided by ${b}.`
-		},
 		failed: 'Something went wrong working that out.',
 		switchLabel: '日本語',
 		switchPath: '/ja'
@@ -252,16 +188,6 @@ export const UI: Record<Locale, UiText> = {
 			'3Dのそろばんで、計算を一玉ずつ、なぜその動かし方になるのかまで説明しながら進めます。',
 		problemLabel: '問題',
 		solve: '解く',
-		examples: '例題',
-		exampleHints: [
-			'繰り上がり',
-			'繰り下がり',
-			'見取り算',
-			'2けた×2けた',
-			'2けた×3けた',
-			'割り切れる',
-			'割り切れない'
-		],
 		panelOpen: '手順と解説',
 		panelClose: '閉じる',
 		tabSteps: '手順',
@@ -327,36 +253,18 @@ export const UI: Record<Locale, UiText> = {
 		readyToMoveUp: (next) => `5問続けて正解です。次は「${next}」へ。`,
 		moveUp: '次へ進む',
 		modeFlash: 'フラッシュ',
-		modeRead: '読み上げ',
 		flashIntro:
 			'盤のあった場所に、数字が1つずつ表示されます。頭の中のそろばんで合計を出し、答えを入れてください。',
-		readIntro: '目を閉じて聞いてください。頭の中のそろばんで合計を出し、答えを入れてください。',
 		flashIntroWhole:
 			'盤のあった場所に問題が一度だけ表示され、消えます。頭の中のそろばんで計算し、答えを入れてください。',
-		readIntroWhole: '目を閉じて聞いてください。頭の中のそろばんで計算し、答えを入れてください。',
 		begin: '始める',
 		again: 'もう一度',
 		watchIt: '盤で見る',
-		listening: '読み上げ中',
-		noSpeech: 'このブラウザは読み上げに対応していません。',
-		noVoice: 'この端末に日本語の音声が見つからないため、正しく読み上げられない場合があります。',
 		perNumber: (seconds) => `1口${seconds}秒`,
 		perProblem: (seconds) => `${seconds}秒表示`,
 		numbersLabel: '口数',
 		recordFlash: (correct, count) => `フラッシュで直近${count}問のうち${correct}問正解`,
-		recordRead: (correct, count) => `読み上げで直近${count}問のうち${correct}問正解`,
 		practiceStartDrill: 'ここでの答えはすべて記録されます。',
-		voiceLang: 'ja-JP',
-		speech: {
-			open: '願いましては',
-			first: (n) => `${n}円なり`,
-			add: (n, afterSubtract) => (afterSubtract ? `加えて${n}円なり` : `${n}円なり`),
-			subtract: (n) => `引いては${n}円なり`,
-			close: 'では',
-			ready: '',
-			times: (a, b) => `${a}かけることの${b}では`,
-			divide: (a, b) => `${a}わることの${b}では`
-		},
 		failed: '計算中にエラーが起きました。',
 		switchLabel: 'English',
 		switchPath: '/'

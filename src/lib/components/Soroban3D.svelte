@@ -122,7 +122,8 @@
 
 	{#if failure}
 		<p class="failure">{failure}</p>
-	{:else if !ready}
+	{:else if !ready && !(veiled && !veilLabel)}
+		<!-- (Not while a drill stands in for the board: it is never shown then.) -->
 		<!-- An ensō, brushed again and again while the board is prepared. -->
 		<div class="loading" role="status" aria-live="polite">
 			<img class="enso" src="/enso.svg" alt="" />

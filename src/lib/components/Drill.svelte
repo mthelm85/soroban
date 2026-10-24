@@ -5,10 +5,7 @@
 	Flash (フラッシュ暗算): a chain's numbers appear one at a time where the
 	board stood, each followed by a moment of blank paper, so a number repeated
 	twice in a row is still seen as two; a multiplication or division appears
-	once, whole, and vanishes. Read aloud (読み上げ算・読み上げ暗算): the browser
-	speaks it, in Japanese with the phrases soroban schools read in, while the
-	page stays empty and the eyes can close. Either way the answer is then
-	given from memory and checked.
+	once, whole, and vanishes. The answer is then given from memory and checked.
 -->
 <script module lang="ts">
 	/** A chain to flash number by number, or a whole × or ÷ problem. */
@@ -26,21 +23,6 @@
 		recallAnswer: string;
 		watchIt: string;
 		nextProblem: string;
-		listening: string;
-		noSpeech: string;
-		noVoice: string;
-		/** The spoken problem: a chain's opening, numbers and close, or a whole × or ÷. */
-		speech: {
-			open: string;
-			first: (n: string) => string;
-			add: (n: string, afterSubtract: boolean) => string;
-			subtract: (n: string) => string;
-			close: string;
-			/** Said before a whole problem; may be empty. */
-			ready: string;
-			times: (a: string, b: string) => string;
-			divide: (a: string, b: string) => string;
-		};
 	}
 </script>
 
@@ -48,15 +30,12 @@
 	import { onDestroy, tick } from 'svelte';
 
 	interface Props {
-		kind: 'flash' | 'read';
 		problem: DrillProblem;
 		answer: string;
 		/** The answer goes on past what is shown (0.1111…). */
 		continues?: boolean;
 		/** The page's speed setting, 0.4–3; 1 is a comfortable pace. */
 		pace: number;
-		/** BCP 47 language for the voice, e.g. "ja-JP". */
-		voiceLang: string;
 		text: DrillText;
 		/** Whether two answers mean the same number. */
 		same: (a: string, b: string) => boolean;
@@ -67,12 +46,10 @@
 	}
 
 	let {
-		kind,
 		problem,
 		answer,
 		continues = false,
 		pace,
-		voiceLang,
 		text,
 		same,
 		onresult,
@@ -82,22 +59,16 @@
 
 	type Phase = 'ready' | 'settle' | 'running' | 'answer' | 'done';
 	let phase = $state<Phase>('ready');
-	/** The number on show while flashing; null for the blank between numbers. */
-	/** What is on show while flashing: a number, signed if subtracted, or a whole problem. */
+	/** What is on show: a number, signed if subtracted, or a whole problem; null between. */
 	let shown = $state<{ text: string; minus: boolean; whole: boolean } | null>(null);
 	let guess = $state('');
 	let verdict = $state<{ correct: boolean; guess: string } | null>(null);
-	let warning = $state('');
 	let field: HTMLInputElement | undefined = $state();
 
 	let timers: ReturnType<typeof setTimeout>[] = [];
-	let run = 0;
-
 	function stop() {
-		run++;
 		for (const t of timers) clearTimeout(t);
 		timers = [];
-		if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
 	}
 
 	function later(ms: number, fn: () => void) {
@@ -115,10 +86,9 @@
 		stop();
 		guess = '';
 		verdict = null;
-		warning = '';
 		phase = 'settle';
-		// A breath before the first number, as a teacher pauses before reading.
-		later(900, () => (kind === 'flash' ? flash() : read()));
+		// A breath before the first number.
+		later(900, flash);
 	}
 
 	function flash() {
@@ -142,67 +112,6 @@
 		later(terms.length * each, ask);
 	}
 
-	/** What the voice says, line by line. */
-	function script(): string[] {
-		const s = text.speech;
-		if (problem.kind === 'whole') {
-			const said =
-				problem.op === '×' ? s.times(problem.a, problem.b) : s.divide(problem.a, problem.b);
-			return [s.ready, said].filter(Boolean);
-		}
-		const terms = problem.terms;
-		const lines = [s.open];
-		terms.forEach((term, i) => {
-			if (i === 0) lines.push(s.first(term.text));
-			else if (term.op === '-') lines.push(s.subtract(term.text));
-			else lines.push(s.add(term.text, terms[i - 1].op === '-'));
-		});
-		lines.push(s.close);
-		return lines;
-	}
-
-	function voiceFor(lang: string): SpeechSynthesisVoice | null {
-		const prefix = lang.slice(0, 2);
-		const voices = speechSynthesis.getVoices();
-		return (
-			voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.startsWith(prefix)) ?? null
-		);
-	}
-
-	function read() {
-		if (typeof speechSynthesis === 'undefined') {
-			warning = text.noSpeech;
-			phase = 'ready';
-			return;
-		}
-		phase = 'running';
-		const voice = voiceFor(voiceLang);
-		if (!voice && speechSynthesis.getVoices().length) warning = text.noVoice;
-		const lines = script();
-
-		const mine = run;
-		const finish = () => {
-			if (mine === run && phase === 'running') void ask();
-		};
-		const rate = Math.min(1.8, Math.max(0.6, 0.55 + 0.45 * pace));
-		lines.forEach((line, i) => {
-			const u = new SpeechSynthesisUtterance(line);
-			u.lang = voiceLang;
-			if (voice) u.voice = voice;
-			u.rate = rate;
-			if (i === lines.length - 1) u.onend = finish;
-			u.onerror = () => {
-				warning = text.noSpeech;
-				finish();
-			};
-			speechSynthesis.speak(u);
-		});
-		// Some devices never report the end of speech (or never speak at all).
-		// Rather than wait for ever, move on well after the reading should be over.
-		const chars = lines.reduce((sum, line) => sum + line.length, 0);
-		later(4000 + (chars * 260) / rate, finish);
-	}
-
 	function check() {
 		if (!guess.trim()) return;
 		verdict = { correct: same(guess, answer), guess: guess.trim() };
@@ -210,44 +119,30 @@
 		onresult?.(verdict.correct);
 	}
 
-	// A new problem, or a change of drill, starts over from the beginning.
+	// A new problem starts over from the beginning.
 	$effect(() => {
 		void problem;
-		void kind;
 		stop();
 		phase = 'ready';
 		shown = null;
 		verdict = null;
 		guess = '';
-		warning = '';
-	});
-
-	// Some browsers load their voices late; asking early makes them start.
-	$effect(() => {
-		if (kind === 'read' && typeof speechSynthesis !== 'undefined') speechSynthesis.getVoices();
 	});
 
 	onDestroy(stop);
 </script>
 
-<div class="drill" class:reading={kind === 'read'}>
+<div class="drill">
 	{#if phase === 'ready'}
 		<div class="centre">
 			<button type="button" class="begin" onclick={begin}>{text.begin}</button>
-			{#if warning}<p class="warning">{warning}</p>{/if}
 		</div>
 	{:else if phase === 'settle' || phase === 'running'}
 		<div class="centre" aria-live="off">
-			{#if kind === 'flash'}
-				{#if shown}
-					<span class="number" class:minus={shown.minus} class:whole={shown.whole}
-						>{shown.text}</span
-					>
-				{/if}
-			{:else}
-				<img class="listening" src="/enso.svg" alt="" />
-				<span class="quiet-label">{text.listening}</span>
-				{#if warning}<p class="warning">{warning}</p>{/if}
+			{#if shown}
+				<span class="number" class:minus={shown.minus} class:whole={shown.whole}
+					>{shown.text}</span
+				>
 			{/if}
 		</div>
 	{:else}
@@ -329,33 +224,6 @@
 		white-space: nowrap;
 	}
 
-	.listening {
-		width: 5.5rem;
-		height: 5.5rem;
-		opacity: 0.22;
-		animation: breathe 3.2s ease-in-out infinite;
-	}
-	@keyframes breathe {
-		50% {
-			opacity: 0.38;
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.listening {
-			animation: none;
-		}
-	}
-	.quiet-label {
-		font: 400 0.95rem/1 var(--display);
-		letter-spacing: 0.08em;
-		color: var(--ink-ghost);
-	}
-	.warning {
-		max-width: 26rem;
-		margin: 0;
-		font: 400 0.95rem/1.5 var(--mincho);
-		color: var(--shu);
-	}
 
 	/* A broad stroke of ink to begin, as the page's other main actions. */
 	.begin,

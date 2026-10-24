@@ -33,7 +33,7 @@ npm run dev
 
 Decimals are accepted throughout. `*` `x` `/` `:` work as well as `×` `÷`.
 
-Each problem can be worked two ways, switched beside the playback controls:
+Each problem can be worked three ways, switched beside the playback controls:
 
 - **Watch** (見る): the method played out bead by bead, with the reasoning for
   every move.
@@ -44,25 +44,22 @@ Each problem can be worked two ways, switched beside the playback controls:
   hidden too, since each would give the moves away. At the last step the
   answer is typed from memory and checked, with a count of the steps revealed.
 
-- **Flash** (フラッシュ) and **Read aloud** (読み上げ): stage ③, with no beads
-  at all. In Flash, the chain's numbers appear one at a time where the board
-  stood, each followed by a moment of blank paper; subtractions show in red. In
-  Read aloud, the browser speaks the chain while the page stays empty — in
-  Japanese with the phrases soroban schools use (願いましては、…円なり、引いては
-  …円なり、…では). Either way the total is kept on the soroban in the mind and
-  typed in to be checked. The speed slider sets the pace. A multiplication or
-  division is flashed once, whole, and read as schools read it
-  (23かけることの45では、4104わることの76では).
+- **Flash** (フラッシュ): stage ③, with no beads at all. A chain's numbers
+  appear one at a time where the board stood, each followed by a moment of
+  blank paper; subtractions show in red. A multiplication or division appears
+  once, whole, and vanishes. The total is kept on the soroban in the mind and
+  typed in to be checked. The speed slider sets the pace.
 
-**Practice** (練習) deals fresh problems at a chosen level, graded the way
+Type any problem into the header, or use **Practice** (練習), which deals
+fresh problems at a chosen level, graded the way
 soroban schools grade them: direct moves only, then five-complements, then
 carries and borrows, then more digits and longer chains, then multiplication
 and division. Every dealt problem is solved by the engine first and kept only
 if its moves fit the level, so a "Fives" problem always needs a
 five-complement and never a carry (`src/lib/soroban/practice.ts`). Answers
-given from memory, flashed or read aloud are recorded per level and per mode
-in the browser; five in a row (from memory: each with at most one step
-revealed) suggests moving up. In the drills, an addition and subtraction level
+given from memory or by flash are recorded per level and per mode in the
+browser; five in a row (from memory: each with at most one step revealed)
+suggests moving up. In Flash, an addition and subtraction level
 can deal chains of 3, 5, 10 or 15 numbers (口数) while keeping to its moves.
 
 The site is in English at `/` and Japanese at `/ja`. The language link in the
