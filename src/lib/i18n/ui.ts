@@ -5,7 +5,12 @@ import type { LevelId } from '../soroban/practice';
 export interface UiText {
 	lang: string;
 	title: string;
+	/** Shown under the title in search results; kept within about 160 characters. */
 	description: string;
+	/** Open Graph locale of this version, e.g. en_US. */
+	ogLocale: string;
+	/** Describes the link-preview picture for screen readers. */
+	socialImageAlt: string;
 	problemLabel: string;
 	/** The button beside the problem that sets it on the board. */
 	solve: string;
@@ -94,9 +99,11 @@ export interface UiText {
 export const UI: Record<Locale, UiText> = {
 	en: {
 		lang: 'en',
-		title: 'Soroban — worked bead by bead',
+		title: 'Soroban — a 3D Japanese abacus, worked bead by bead',
 		description:
-			'A 3D Japanese soroban that works arithmetic out bead by bead, explaining why each move is the one the method calls for.',
+			'A free 3D Japanese abacus that works any sum bead by bead, explains why each move is made, and trains you toward mental arithmetic (anzan).',
+		ogLocale: 'en_US',
+		socialImageAlt: 'A wooden soroban on rice paper with 1035 set on its rods, under the title Soroban — worked bead by bead.',
 		problemLabel: 'Problem',
 		solve: 'Solve',
 		panelOpen: 'Steps & method',
@@ -181,9 +188,11 @@ export const UI: Record<Locale, UiText> = {
 	},
 	ja: {
 		lang: 'ja',
-		title: 'そろばん — 一玉ずつ、なぜかまで',
+		title: 'そろばん — 3Dの算盤で一玉ずつ、なぜかまで',
 		description:
-			'3Dのそろばんで、計算を一玉ずつ、なぜその動かし方になるのかまで説明しながら進めます。',
+			'無料の3Dそろばん。足し算・引き算・かけ算・わり算を一玉ずつ、なぜその動かし方になるのかまで説明し、暗算まで導きます。',
+		ogLocale: 'ja_JP',
+		socialImageAlt: '和紙の上の木のそろばん。桁には1035が置かれている。',
 		problemLabel: '問題',
 		solve: '解く',
 		panelOpen: '手順と解説',

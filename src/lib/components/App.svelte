@@ -5,6 +5,7 @@
 	import Soroban3D from '#lib/components/Soroban3D.svelte';
 	import StepList from '#lib/components/StepList.svelte';
 	import InkMenu from '#lib/components/InkMenu.svelte';
+	import About from '#lib/components/About.svelte';
 	import Drill, { type DrillProblem, type DrillText } from '#lib/components/Drill.svelte';
 	import {
 		LEVELS,
@@ -14,6 +15,8 @@
 		type LevelId
 	} from '#lib/soroban/practice.js';
 	import { UI } from '#lib/i18n/ui.js';
+	import { ABOUT } from '#lib/i18n/about.js';
+	import { PAGE_URL, SITE_URL, SOCIAL_IMAGE } from '#lib/site.js';
 	import {
 		decToString,
 		formatSpan,
@@ -30,6 +33,52 @@
 	let { locale }: { locale: Locale } = $props();
 
 	const ui = $derived(UI[locale]);
+	const about = $derived(ABOUT[locale]);
+
+	/*
+	 * What the page is, in schema.org terms, for search and answer engines: an
+	 * app that is free and runs in the browser, and the questions it answers,
+	 * taken from the very text shown in the About section. `<` is escaped so
+	 * nothing in the text can close the script tag early.
+	 */
+	const structuredData = $derived(
+		JSON.stringify({
+			'@context': 'https://schema.org',
+			'@graph': [
+				{
+					'@type': 'WebApplication',
+					'@id': `${SITE_URL}/#app`,
+					name: ui.title,
+					alternateName: ['Soroban', 'そろばん', '算盤'],
+					url: PAGE_URL[locale],
+					description: ui.description,
+					image: SOCIAL_IMAGE,
+					inLanguage: locale,
+					applicationCategory: 'EducationalApplication',
+					operatingSystem: 'Any',
+					browserRequirements: 'Requires WebGPU or WebGL 2',
+					isAccessibleForFree: true,
+					offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+					teaches: [
+						'Soroban (Japanese abacus) addition and subtraction with complements',
+						'Ryō-otoshi (両落とし) multiplication',
+						'Kata-otoshi (片落とし) division with kakushō (確商)',
+						'Anzan (暗算) mental calculation'
+					]
+				},
+				{
+					'@type': 'FAQPage',
+					'@id': `${PAGE_URL[locale]}#faq`,
+					inLanguage: locale,
+					mainEntity: about.faq.map(({ q, a }) => ({
+						'@type': 'Question',
+						name: q,
+						acceptedAnswer: { '@type': 'Answer', text: a }
+					}))
+				}
+			]
+		}).replace(/</g, '\\u003c')
+	);
 
 	// A first problem anyone can follow: a chain with a carry and a borrow.
 	const DEFAULT_PROBLEM = '123 + 456 − 78';
@@ -482,6 +531,29 @@
 <svelte:head>
 	<title>{ui.title}</title>
 	<meta name="description" content={ui.description} />
+	<meta name="theme-color" content="#f1ece1" />
+
+	<!-- One address per language, and each names the other as its translation. -->
+	<link rel="canonical" href={PAGE_URL[locale]} />
+	<link rel="alternate" hreflang="en" href={PAGE_URL.en} />
+	<link rel="alternate" hreflang="ja" href={PAGE_URL.ja} />
+	<link rel="alternate" hreflang="x-default" href={PAGE_URL.en} />
+
+	<!-- The card a shared link unfolds into. -->
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Soroban" />
+	<meta property="og:title" content={ui.title} />
+	<meta property="og:description" content={ui.description} />
+	<meta property="og:url" content={PAGE_URL[locale]} />
+	<meta property="og:locale" content={ui.ogLocale} />
+	<meta property="og:locale:alternate" content={UI[locale === 'en' ? 'ja' : 'en'].ogLocale} />
+	<meta property="og:image" content={SOCIAL_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content={ui.socialImageAlt} />
+	<meta name="twitter:card" content="summary_large_image" />
+
+	{@html `<script type="application/ld+json">${structuredData}</script>`}
 </svelte:head>
 
 <!-- A rough edge for the seal, as if stamped rather than printed. -->
@@ -877,6 +949,8 @@
 				</p>
 			</section>
 		{/if}
+
+		<About text={about} />
 	</div>
 
 	{#if panelOpen}

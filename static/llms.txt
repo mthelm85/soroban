@@ -1,0 +1,21 @@
+# Soroban — a 3D Japanese abacus, worked bead by bead
+
+> A free, browser-based 3D soroban (Japanese abacus) that works any addition, subtraction, multiplication or division bead by bead and explains why each move is made, using the methods taught in Japanese soroban schools. It builds toward anzan (mental calculation) in three stages: Watch, From memory, and Flash. Available in English and Japanese.
+
+A problem can be opened directly by adding `?q=` with the problem to the URL, for example https://mthelm85.github.io/soroban/?q=4104%20%C3%B7%2076 for 4104 ÷ 76. Use × (or x, *) for multiplication and ÷ (or /) for division.
+
+## Pages
+
+- [Soroban (English)](https://mthelm85.github.io/soroban/): the app, with an About section answering what a soroban is and how each operation is worked
+- [そろばん (日本語)](https://mthelm85.github.io/soroban/ja): the same app in Japanese
+
+## Methods taught
+
+- Addition and subtraction: digits set from the highest place down into one running total; five-complements (五の合成・五の分解) and ten-complements (十の繰り上がり・十の繰り下がり) when a rod lacks beads
+- Multiplication: 両落とし (ryō-otoshi). Neither factor is set on the board; each single-digit product is added into the answer, its ones digit landing k + j rods left of the answer's ones rod for digits in places k and j
+- Division: 片落とし (kata-otoshi) with 確商 (kakushō). Only the dividend is set; each quotient digit is settled mentally first (the largest multiple of the divisor that fits), set to the left of the dividend, and its products subtracted, with no correction afterwards
+- Practice: graded levels for each operation, with problems checked from memory or after a flash
+
+## Source
+
+- [Source code on GitHub](https://github.com/mthelm85/soroban)
